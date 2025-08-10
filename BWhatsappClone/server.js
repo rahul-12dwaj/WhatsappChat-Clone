@@ -1,9 +1,10 @@
-import express from "express";
-import cors from "cors";
-import mongoose from "mongoose";
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const fs = require("fs");
+const path = require("path");
+const dotenv = require("dotenv")
+
 
 dotenv.config(); // Load .env variables
 
