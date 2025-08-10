@@ -1,0 +1,147 @@
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import fs from "fs";
+import path from "path";
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// MongoDB Schema
+const messageSchema = new mongoose.Schema({
+  id: String,
+  wa_id: String,
+  name: String,
+  text: String,
+  sent: Boolean,
+  time: String,
+  status: String
+});
+const ProcessedMessage = mongoose.model("processed_messages", messageSchema);
+
+// 📌 Function to seed database
+async function seedDatabase() {
+  const payloadFiles = [
+    "conversation_1_message_1.json",
+    "conversation_1_message_2.json",
+    "conversation_1_status_1.json",
+    "conversation_1_status_2.json",
+    "conversation_2_message_1.json",
+    "conversation_2_message_2.json",
+    "conversation_2_status_1.json",
+    "conversation_2_status_2.json"
+  ];
+
+  for (const file of payloadFiles) {
+    const raw = fs.readFileSync(path.join("./payloads", file), "utf-8");
+    const payload = JSON.parse(raw);
+    const change = payload.metaData?.entry?.[0]?.changes?.[0]?.value;
+    if (!change) continue;
+
+    const contact = change.contacts?.[0];
+    const wa_id = contact?.wa_id;
+    const name = contact?.profile?.name || "Unknown";
+
+    if (change.messages) {
+  for (const msg of change.messages) {
+    await ProcessedMessage.create({
+      id: msg.id,
+      wa_id,
+      name,
+      text: msg.text?.body || "",
+      time: new Date(parseInt(msg.timestamp) * 1000).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      }),
+      sent: msg.from !== wa_id,
+      status: "read" // ✅ All seeded messages are marked as read
+    });
+  }
+}
+
+
+    if (change.statuses) {
+      for (const st of change.statuses) {
+        await ProcessedMessage.updateOne(
+          { id: st.id },
+          { $set: { status: st.status } }
+        );
+      }
+    }
+  }
+  console.log("✅ Database seeded");
+}
+
+// Connect to MongoDB and run seed
+mongoose
+  .connect("mongodb://localhost:27017/whatsapp", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
+  .then(async () => {
+    console.log("✅ MongoDB connected");
+
+    // Optional: Clear old messages before seeding
+    await ProcessedMessage.deleteMany({});
+    await seedDatabase();
+
+    // Start the server after seeding
+    app.listen(5000, () => console.log("🚀 Server running on port 5000"));
+  })
+  .catch(err => console.error("❌ MongoDB connection error:", err));
+
+// Routes
+app.get("/api/chats", async (req, res) => {
+  try {
+    const messages = await ProcessedMessage.find();
+
+    const chatsMap = {};
+    messages.forEach(msg => {
+      if (!chatsMap[msg.wa_id]) {
+        chatsMap[msg.wa_id] = {
+          id: msg.wa_id,
+          name: msg.name || "Unknown",
+          avatar: "/default-avatar.png",
+          messages: [],
+          lastMessage: "",
+          time: "",
+          status: ""
+        };
+      }
+
+      chatsMap[msg.wa_id].messages.push(msg);
+      chatsMap[msg.wa_id].lastMessage = msg.text;
+      chatsMap[msg.wa_id].time = msg.time;
+      chatsMap[msg.wa_id].status = msg.status; // ✅ Keep latest message's status
+    });
+
+    res.json(Object.values(chatsMap));
+  } catch (err) {
+    console.error("❌ Error fetching chats:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+app.post("/api/messages", async (req, res) => {
+  try {
+    const { wa_id, text, name } = req.body;
+
+    const newMsg = new ProcessedMessage({
+      id: Date.now().toString(),
+      wa_id,
+      name: name || "Unknown",
+      text,
+      sent: true,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      status: "sent"
+    });
+
+    await newMsg.save();
+    res.status(201).json(newMsg);
+  } catch (err) {
+    console.error("❌ Error saving message:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
