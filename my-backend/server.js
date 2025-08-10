@@ -8,7 +8,12 @@ const dotenv = require("dotenv");
 dotenv.config(); // Load .env variables
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ["https://whatsapp-chat-clone-black.vercel.app/", "http://localhost:3000"],
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"]
+}));
+
 app.use(express.json());
 
 // Mongoose configuration to avoid deprecation warnings
