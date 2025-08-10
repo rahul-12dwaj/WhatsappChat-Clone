@@ -18,7 +18,7 @@ export default function ChatWindow({ chat, onBack, onSendMessage }) {
     onSendMessage(chat.id, msgObj);
 
     try {
-      await fetch("http://localhost:5000/api/messages", {
+      await fetch("https://whatsappchat-production-8347.up.railway.app/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
