@@ -3,14 +3,16 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
-const dotenv = require("dotenv")
-
+const dotenv = require("dotenv");
 
 dotenv.config(); // Load .env variables
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Mongoose configuration to avoid deprecation warnings
+mongoose.set("strictQuery", false);
 
 // MongoDB Schema
 const messageSchema = new mongoose.Schema({
@@ -38,36 +40,40 @@ async function seedDatabase() {
   ];
 
   for (const file of payloadFiles) {
-    const raw = fs.readFileSync(path.join("./payloads", file), "utf-8");
-    const payload = JSON.parse(raw);
-    const change = payload.metaData?.entry?.[0]?.changes?.[0]?.value;
-    if (!change) continue;
+    try {
+      const raw = fs.readFileSync(path.join("./payloads", file), "utf-8");
+      const payload = JSON.parse(raw);
+      const change = payload.metaData?.entry?.[0]?.changes?.[0]?.value;
+      if (!change) continue;
 
-    const contact = change.contacts?.[0];
-    const wa_id = contact?.wa_id;
-    const name = contact?.profile?.name || "Unknown";
+      const contact = change.contacts?.[0];
+      const wa_id = contact?.wa_id;
+      const name = contact?.profile?.name || "Unknown";
 
-    if (change.messages) {
-      for (const msg of change.messages) {
-        await ProcessedMessage.create({
-          id: msg.id,
-          wa_id,
-          name,
-          text: msg.text?.body || "",
-          time: new Date(parseInt(msg.timestamp) * 1000).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          sent: msg.from !== wa_id,
-          status: "read", // ✅ All seeded messages are marked as read
-        });
+      if (change.messages) {
+        for (const msg of change.messages) {
+          await ProcessedMessage.create({
+            id: msg.id,
+            wa_id,
+            name,
+            text: msg.text?.body || "",
+            time: new Date(parseInt(msg.timestamp) * 1000).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            sent: msg.from !== wa_id,
+            status: "read", // ✅ All seeded messages are marked as read
+          });
+        }
       }
-    }
 
-    if (change.statuses) {
-      for (const st of change.statuses) {
-        await ProcessedMessage.updateOne({ id: st.id }, { $set: { status: st.status } });
+      if (change.statuses) {
+        for (const st of change.statuses) {
+          await ProcessedMessage.updateOne({ id: st.id }, { $set: { status: st.status } });
+        }
       }
+    } catch (err) {
+      console.error(`❌ Error seeding data from file ${file}:`, err);
     }
   }
   console.log("✅ Database seeded");
@@ -88,7 +94,7 @@ mongoose
 
     // Start the server after seeding
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${port}`));
+    app.listen(PORT, "0.0.0.0", () => console.log(`🚀 Server running on port ${PORT}`));
   })
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
@@ -127,6 +133,9 @@ app.get("/api/chats", async (req, res) => {
 app.post("/api/messages", async (req, res) => {
   try {
     const { wa_id, text, name } = req.body;
+    if (!wa_id || !text) {
+      return res.status(400).json({ error: "Missing wa_id or text in request body" });
+    }
 
     const newMsg = new ProcessedMessage({
       id: Date.now().toString(),
@@ -144,4 +153,10 @@ app.post("/api/messages", async (req, res) => {
     console.error("❌ Error saving message:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
+});
+
+// Global error handling middleware (optional but recommended)
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal Server Error" });
 });
