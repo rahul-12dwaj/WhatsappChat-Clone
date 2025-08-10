@@ -87,7 +87,7 @@ mongoose
     await seedDatabase();
 
     // Start the server after seeding
-    const port = process.env.PORT || 5000;
+    const PORT = process.env.PORT || 5000;
     app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${port}`));
   })
   .catch((err) => console.error("❌ MongoDB connection error:", err));
