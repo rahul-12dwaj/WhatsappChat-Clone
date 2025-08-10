@@ -8,8 +8,7 @@
   },
   "author": "Rahul Bhardwaj",
   "license": "ISC",
-  "keywords": [],
-  "type": "module", 
+  "keywords": [], 
   "description": "",
   "devDependencies": {
     "nodemon": "^3.1.10"
