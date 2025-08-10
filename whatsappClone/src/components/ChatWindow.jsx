@@ -4,34 +4,45 @@ export default function ChatWindow({ chat, onBack, onSendMessage }) {
   const [newMessage, setNewMessage] = useState("");
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+  if (!newMessage.trim()) return;
 
-    const msgObj = {
-      id: Date.now().toString(),
-      text: newMessage,
-      sent: true,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      timestamp: Date.now(),
-      status: "sent",
-    };
+  if (!chat?.id) {
+    console.error("No chat id available");
+    return;
+  }
 
-    onSendMessage(chat.id, msgObj);
-
-    try {
-      await fetch("https://whatsappchat-production-8347.up.railway.app/api/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wa_id: chat.id,
-          text: newMessage,
-        }),
-      });
-    } catch (error) {
-      console.error("Failed to send message:", error);
-    }
-
-    setNewMessage("");
+  const msgObj = {
+    id: Date.now().toString(),
+    text: newMessage,
+    sent: true,
+    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    timestamp: Date.now(),
+    status: "sent",
   };
+
+  onSendMessage(chat.id, msgObj);
+
+  try {
+    console.log("Sending message:", { wa_id: chat.id, text: newMessage });
+    const response = await fetch("https://whatsappchat-production-8347.up.railway.app/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wa_id: chat.id,
+        text: newMessage,
+      }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Backend error:", errorData);
+    }
+  } catch (error) {
+    console.error("Failed to send message:", error);
+  }
+
+  setNewMessage("");
+};
+
 
   const renderStatusIcon = (status) => {
     if (status === "sent") return <span>✓</span>;

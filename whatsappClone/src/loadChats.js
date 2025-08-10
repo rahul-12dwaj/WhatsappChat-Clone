@@ -1,7 +1,7 @@
 // src/loadChats.js
 export default async function loadChats() {
   try {
-    const res = await fetch("http://localhost:5000/api/chats");
+    const res = await fetch("https://whatsappchat-production-8347.up.railway.app//api/chats");
     if (!res.ok) {
       throw new Error(`Failed to load chats: ${res.statusText}`);
     }
