@@ -5,10 +5,12 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
-  }
-,
+  },
   "author": "Rahul Bhardwaj",
   "license": "ISC",
   "keywords": [],
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
 }
