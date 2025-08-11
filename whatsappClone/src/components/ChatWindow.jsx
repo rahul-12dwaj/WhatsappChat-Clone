@@ -136,7 +136,8 @@ export default function ChatWindow({ chat, onBack, userId }) {
           )}
           <div>
             <h2 className="font-semibold">{chat.otherUserName}</h2>
-            <p className="text-xs">online</p>
+            <p className="text-xs">{chat.phone}</p>
+
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
+const crypto = require("crypto");
 
 dotenv.config();
 
@@ -13,12 +14,13 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
+// ==== MongoDB Connection ====
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-}).then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("❌ MongoDB connection error:", err));
+})
+.then(() => console.log("✅ MongoDB connected"))
+.catch(err => console.error("❌ MongoDB connection error:", err));
 
 // ==== Schemas ====
 const userSchema = new mongoose.Schema({
@@ -28,7 +30,7 @@ const userSchema = new mongoose.Schema({
 });
 
 const messageSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
+  id: { type: String, required: true, unique: true }, // message UUID
   from: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   to: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   text: String,
@@ -41,33 +43,54 @@ const messageSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 const Message = mongoose.model("Message", messageSchema);
 
-// ==== Socket.io ====
+// ==== Socket.io Setup ====
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
+  cors: { origin: "*", methods: ["GET", "POST"] },
+  pingTimeout: 20000,
+  pingInterval: 25000
 });
 
-const onlineUsers = {};
+const onlineUsers = new Map(); // Map<wa_id, socket.id>
+
+// Utility to generate unique message IDs
+const generateMessageId = () => crypto.randomUUID();
 
 io.on("connection", (socket) => {
   console.log("🔌 User connected:", socket.id);
 
-  socket.on("register", async (wa_id) => {
-    onlineUsers[wa_id] = socket.id;
-    console.log(`📌 Registered user ${wa_id} with socket ${socket.id}`);
+  // Ensure we remove all old listeners when reconnecting
+  socket.removeAllListeners();
+
+  // User registration
+  socket.on("register", (wa_id) => {
+    onlineUsers.set(wa_id, socket.id);
+    console.log(`📌 Registered ${wa_id} → socket ${socket.id}`);
   });
 
-  socket.on("sendMessage", async (msg) => {
+  // Send message event
+  socket.on("sendMessage", async (msg, ack) => {
     try {
+      // Deduplication: If msg.id exists, ignore
+      if (!msg.id) msg.id = generateMessageId();
+
+      const exists = await Message.findOne({ id: msg.id });
+      if (exists) {
+        console.log(`⚠️ Duplicate message ignored: ${msg.id}`);
+        if (ack) ack({ delivered: true, duplicate: true });
+        return;
+      }
+
       const fromUser = await User.findOne({ wa_id: msg.wa_id });
       const toUser = await User.findOne({ wa_id: msg.to });
 
-      if (!fromUser || !toUser) return console.error("❌ Invalid user(s) for message");
+      if (!fromUser || !toUser) {
+        console.error("❌ Invalid user(s) for message");
+        if (ack) ack({ delivered: false, error: "Invalid user(s)" });
+        return;
+      }
 
       const newMsg = await Message.create({
-        id: `msg_${Date.now()}`,
+        id: msg.id,
         from: fromUser._id,
         to: toUser._id,
         text: msg.text,
@@ -90,40 +113,47 @@ io.on("connection", (socket) => {
         toName: toUser.name,
       };
 
-      // Send to recipient if online
-      if (onlineUsers[toUser.wa_id]) {
-        io.to(onlineUsers[toUser.wa_id]).emit("newMessage", populatedMsg);
+      // Emit to recipient (if online)
+      const recipientSocket = onlineUsers.get(toUser.wa_id);
+      if (recipientSocket) {
+        io.to(recipientSocket).emit("newMessage", populatedMsg);
       }
 
-      // Send to sender as confirmation
-      if (onlineUsers[fromUser.wa_id]) {
-        io.to(onlineUsers[fromUser.wa_id]).emit("newMessage", populatedMsg);
+      // Emit back to sender as confirmation
+      const senderSocket = onlineUsers.get(fromUser.wa_id);
+      if (senderSocket) {
+        io.to(senderSocket).emit("newMessage", populatedMsg);
       }
+
+      // Send ack back to client for delivery confirmation
+      if (ack) ack({ delivered: true, id: newMsg.id });
 
     } catch (err) {
       console.error("❌ Error sending message:", err);
+      if (ack) ack({ delivered: false, error: err.message });
     }
   });
 
+  // Handle disconnection
   socket.on("disconnect", () => {
     console.log("❌ Disconnected:", socket.id);
-    for (let wa_id in onlineUsers) {
-      if (onlineUsers[wa_id] === socket.id) {
-        delete onlineUsers[wa_id];
+    for (let [wa_id, sId] of onlineUsers.entries()) {
+      if (sId === socket.id) {
+        onlineUsers.delete(wa_id);
         break;
       }
     }
   });
 });
 
-// ==== API Routes ====
+// ==== REST API Routes ====
 
 // Get all users
 app.get("/api/users", async (req, res) => {
   try {
     const users = await User.find({}, "wa_id name");
     res.json(users);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch users" });
   }
 });
@@ -140,11 +170,11 @@ app.get("/api/chats", async (req, res) => {
     const messages = await Message.find({
       $or: [{ from: user._id }, { to: user._id }],
     })
-      .populate("from", "wa_id name")
-      .populate("to", "wa_id name")
-      .sort({ timestamp: 1 });
+    .populate("from", "wa_id name phone")
+    .populate("to", "wa_id name phone")
 
-    // Group messages by other participant's wa_id
+    .sort({ timestamp: 1 });
+
     const chatsMap = {};
     messages.forEach((msg) => {
       const otherUser = msg.from.wa_id === userId ? msg.to : msg.from;
@@ -153,6 +183,7 @@ app.get("/api/chats", async (req, res) => {
           id: otherUser.wa_id,
           name: otherUser.name,
           messages: [],
+          phone: otherUser.phone,
         };
       }
       chatsMap[otherUser.wa_id].messages.push({
@@ -167,7 +198,7 @@ app.get("/api/chats", async (req, res) => {
     });
 
     res.json(Object.values(chatsMap));
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch chats" });
   }
 });

@@ -156,6 +156,8 @@ function App() {
 
   const currentUserName = testUsers.find(user => user.wa_id === userId)?.name || "Loading...";
 
+  
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <header className="p-4 bg-gray-800 text-white flex justify-between items-center flex-shrink-0">
