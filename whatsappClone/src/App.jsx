@@ -155,8 +155,8 @@ function App() {
     testUsers.find((user) => user.wa_id === userId)?.name || "Loading...";
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-gray-900 text-white">
-      <header className="p-4 bg-gray-800 text-white flex justify-between items-center flex-shrink-0 border-b border-gray-700">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#111b21] text-white">
+      <header className="p-4 bg-[#111b21] text-white flex justify-between items-center flex-shrink-0 border-none">
         <div className="flex items-center gap-3">
           <img src="/whatsapp.png" alt="WhatsApp" className="w-8 h-8 object-contain" />
           <h1 className="text-xl font-bold">WhatsApp</h1>
@@ -183,20 +183,18 @@ function App() {
             Switch User (Current: {currentUserName})
           </span>
         </button>
-
       </header>
 
-      <div className="flex flex-grow overflow-hidden w-full">
+      <div className="flex flex-grow overflow-hidden w-full min-h-0">
         {/* Desktop Sidebar (visible on sm and above) */}
-        <div className="hidden sm:flex flex-shrink-0">
+        <div className="hidden sm:flex flex-shrink-0 min-h-0">
           <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
 
         {/* Main content area */}
-        <div className="flex-grow flex overflow-hidden w-full h-full">
-
+        <div className="flex flex-grow overflow-hidden w-full min-h-0 border-t border-[#222D32]">
           {/* Desktop: ChatList */}
-          <div className="hidden sm:flex w-1/3 border-r border-gray-700 overflow-y-auto bg-gray-700">
+          <div className="hidden sm:flex w-1/3 border-r border-l border-gray-700 bg-gray-700 min-h-0 overflow-y-auto">
             <ChatList
               chats={sortedChats}
               onSelectChat={setSelectedChatId}
@@ -206,9 +204,9 @@ function App() {
           </div>
 
           {/* Desktop: ChatWindow */}
-          <div className="hidden sm:flex w-2/3 flex items-center justify-center bg-[#111b21]">
+          <div className="hidden sm:flex w-2/3 flex flex-col bg-[#111b21] min-h-0">
             {selectedChat ? (
-              <div className="w-full max-h-full flex flex-col overflow-hidden h-screen">
+              <div className="flex flex-col flex-grow overflow-hidden min-h-0">
                 <ChatWindow
                   chat={selectedChat}
                   onBack={() => setSelectedChatId(null)}
@@ -224,14 +222,14 @@ function App() {
           {/* Mobile view */}
           {/* If no chat selected => show sidebar + chat list */}
           {!selectedChatId && (
-            <div className="w-full sm:hidden">
-              <div className="flex h-full overflow-hidden">
+            <div className="w-full sm:hidden flex flex-col min-h-0">
+              <div className="flex h-full overflow-hidden min-h-0">
                 {/* Sidebar */}
-                <div className="flex-shrink-0 bg-[#111b21] border-r border-gray-700 shadow-md">
+                <div className="flex-shrink-0 bg-[#111b21] border-r border-gray-700 shadow-md min-h-0">
                   <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
                 </div>
                 {/* ChatList */}
-                <div className="flex-grow w-full overflow-y-auto bg-gray-700">
+                <div className="flex-grow w-full overflow-y-auto bg-[#111b21] min-h-0">
                   <ChatList
                     chats={sortedChats}
                     onSelectChat={setSelectedChatId}
@@ -245,7 +243,7 @@ function App() {
 
           {/* Mobile: If chat selected => show only chat window */}
           {selectedChatId && (
-            <div className="sm:hidden flex-grow w-full h-full bg-[#111b21]">
+            <div className="sm:hidden flex-grow w-full h-full min-h-0 flex flex-col">
               <ChatWindow
                 chat={selectedChat}
                 onBack={() => setSelectedChatId(null)}

@@ -34,7 +34,7 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
 
   return (
     <div
-      className="w-full border-r border-[#222D32] flex flex-col overflow-x-hidden min-w-0 h-screen bg-[#111B21] text-[#E9EDEF]"
+      className="w-full border-r border-[#222D32] flex flex-col overflow-x-hidden min-w-0  bg-[#111B21] text-[#E9EDEF]"
       role="list"
       aria-label="Chat list"
     >
