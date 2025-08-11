@@ -50,24 +50,6 @@ async function seed() {
       phone: "9123456780",
     });
 
-    const anjali = await User.create({
-      wa_id: "wa_anjali789",
-      name: "Anjali Sharma",
-      phone: "9988776655",
-    });
-
-    const sameer = await User.create({
-      wa_id: "wa_sameer321",
-      name: "Sameer Singh",
-      phone: "9012345678",
-    });
-
-    const priya = await User.create({
-      wa_id: "wa_priya654",
-      name: "Priya Verma",
-      phone: "9001122334",
-    });
-
     // Helper to format time
     const formatTime = (date) =>
       date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -82,8 +64,8 @@ async function seed() {
         to: ravi._id,
         text: "Hey Ravi, how are you?",
         sent: true,
-        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 24)),
-        timestamp: now.getTime() - 1000 * 60 * 60 * 24,
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 2)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 2,
         status: "read",
       },
       {
@@ -92,8 +74,8 @@ async function seed() {
         to: neha._id,
         text: "Hi Neha! I'm good, thanks. How about you?",
         sent: true,
-        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 23.5)),
-        timestamp: now.getTime() - 1000 * 60 * 60 * 23.5,
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 1.5)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 1.5,
         status: "read",
       },
       {
@@ -102,61 +84,9 @@ async function seed() {
         to: ravi._id,
         text: "Doing well! Are we still on for the meeting tomorrow?",
         sent: true,
-        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 23)),
-        timestamp: now.getTime() - 1000 * 60 * 60 * 23,
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 1)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 1,
         status: "read",
-      },
-      {
-        id: "msg4",
-        from: ravi._id,
-        to: neha._id,
-        text: "Yes, absolutely. See you then.",
-        sent: true,
-        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 22.5)),
-        timestamp: now.getTime() - 1000 * 60 * 60 * 22.5,
-        status: "read",
-      },
-      {
-        id: "msg5",
-        from: neha._id,
-        to: ravi._id,
-        text: "Great! Have a good day.",
-        sent: true,
-        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 22)),
-        timestamp: now.getTime() - 1000 * 60 * 60 * 22,
-        status: "read",
-      },
-      // New messages between Anjali and Sameer
-      {
-        id: "msg6",
-        from: anjali._id,
-        to: sameer._id,
-        text: "Hey Sameer, did you check the report?",
-        sent: true,
-        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 10)),
-        timestamp: now.getTime() - 1000 * 60 * 60 * 10,
-        status: "delivered",
-      },
-      {
-        id: "msg7",
-        from: sameer._id,
-        to: anjali._id,
-        text: "Yes, looks good. I'll send feedback soon.",
-        sent: true,
-        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 9.5)),
-        timestamp: now.getTime() - 1000 * 60 * 60 * 9.5,
-        status: "read",
-      },
-      // One message from Priya to Neha (one sided chat)
-      {
-        id: "msg8",
-        from: priya._id,
-        to: neha._id,
-        text: "Hi Neha, can we catch up this weekend?",
-        sent: true,
-        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 5)),
-        timestamp: now.getTime() - 1000 * 60 * 60 * 5,
-        status: "sent",
       },
     ];
 
