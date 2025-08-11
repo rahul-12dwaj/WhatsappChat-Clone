@@ -109,7 +109,7 @@ function App() {
       socket.off("connect", handleConnect);
       socket.off("newMessage", handleNewMessage);
     };
-  }, [userId, testUsers]);
+  }, [userId]);
 
   const sortedChats = [...chats].sort((a, b) => {
     const timeA = a.messages[a.messages.length - 1]?.timestamp || 0;

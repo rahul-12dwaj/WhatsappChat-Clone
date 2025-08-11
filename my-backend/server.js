@@ -40,6 +40,12 @@ const messageSchema = new mongoose.Schema({
   status: String,
 });
 
+// Add indexes to speed up queries
+messageSchema.index({ id: 1 }, { unique: true });
+messageSchema.index({ from: 1 });
+messageSchema.index({ to: 1 });
+messageSchema.index({ timestamp: -1 });
+
 const User = mongoose.model("User", userSchema);
 const Message = mongoose.model("Message", messageSchema);
 
@@ -47,10 +53,11 @@ const Message = mongoose.model("Message", messageSchema);
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
   pingTimeout: 20000,
-  pingInterval: 25000
+  pingInterval: 25000,
 });
 
 const onlineUsers = new Map(); // Map<wa_id, socket.id>
+const userCache = new Map();   // Map<wa_id, userDoc> cached users
 
 // Utility to generate unique message IDs
 const generateMessageId = () => crypto.randomUUID();
@@ -58,30 +65,47 @@ const generateMessageId = () => crypto.randomUUID();
 io.on("connection", (socket) => {
   console.log("🔌 User connected:", socket.id);
 
-  // Ensure we remove all old listeners when reconnecting
   socket.removeAllListeners();
 
-  // User registration
-  socket.on("register", (wa_id) => {
+  // User registration - cache user doc for fast lookup
+  socket.on("register", async (wa_id) => {
     onlineUsers.set(wa_id, socket.id);
     console.log(`📌 Registered ${wa_id} → socket ${socket.id}`);
+
+    if (!userCache.has(wa_id)) {
+      try {
+        const userDoc = await User.findOne({ wa_id });
+        if (userDoc) userCache.set(wa_id, userDoc);
+      } catch (err) {
+        console.error(`❌ Error caching user ${wa_id}:`, err);
+      }
+    }
   });
 
-  // Send message event
   socket.on("sendMessage", async (msg, ack) => {
     try {
-      // Deduplication: If msg.id exists, ignore
       if (!msg.id) msg.id = generateMessageId();
 
-      const exists = await Message.findOne({ id: msg.id });
+      // Deduplication check - optional optimization:
+      const exists = await Message.exists({ id: msg.id });
       if (exists) {
         console.log(`⚠️ Duplicate message ignored: ${msg.id}`);
         if (ack) ack({ delivered: true, duplicate: true });
         return;
       }
 
-      const fromUser = await User.findOne({ wa_id: msg.wa_id });
-      const toUser = await User.findOne({ wa_id: msg.to });
+      // Use cached user objects if available, else fetch and cache
+      let fromUser = userCache.get(msg.wa_id);
+      if (!fromUser) {
+        fromUser = await User.findOne({ wa_id: msg.wa_id });
+        if (fromUser) userCache.set(msg.wa_id, fromUser);
+      }
+
+      let toUser = userCache.get(msg.to);
+      if (!toUser) {
+        toUser = await User.findOne({ wa_id: msg.to });
+        if (toUser) userCache.set(msg.to, toUser);
+      }
 
       if (!fromUser || !toUser) {
         console.error("❌ Invalid user(s) for message");
@@ -89,55 +113,56 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const newMsg = await Message.create({
+      // Prepare message to emit immediately
+      const populatedMsg = {
         id: msg.id,
-        from: fromUser._id,
-        to: toUser._id,
         text: msg.text,
         sent: true,
         time: msg.time || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         timestamp: Date.now(),
         status: "sent",
-      });
-
-      const populatedMsg = {
-        id: newMsg.id,
-        text: newMsg.text,
-        sent: newMsg.sent,
-        time: newMsg.time,
-        timestamp: newMsg.timestamp,
-        status: newMsg.status,
         wa_id: fromUser.wa_id,
         fromName: fromUser.name,
         to: toUser.wa_id,
         toName: toUser.name,
       };
 
-      // Emit to recipient (if online)
+      // Emit immediately to recipient (if online)
       const recipientSocket = onlineUsers.get(toUser.wa_id);
       if (recipientSocket) {
         io.to(recipientSocket).emit("newMessage", populatedMsg);
       }
 
-      // Emit back to sender as confirmation
+      // Emit back to sender for optimistic UI update
       const senderSocket = onlineUsers.get(fromUser.wa_id);
       if (senderSocket) {
         io.to(senderSocket).emit("newMessage", populatedMsg);
       }
 
-      // Send ack back to client for delivery confirmation
-      if (ack) ack({ delivered: true, id: newMsg.id });
+      // Save message asynchronously without blocking socket response
+      Message.create({
+        id: msg.id,
+        from: fromUser._id,
+        to: toUser._id,
+        text: msg.text,
+        sent: true,
+        time: populatedMsg.time,
+        timestamp: populatedMsg.timestamp,
+        status: "sent",
+      }).catch(err => console.error("❌ Error saving message:", err));
+
+      // Send ack immediately after emit
+      if (ack) ack({ delivered: true, id: msg.id });
 
     } catch (err) {
-      console.error("❌ Error sending message:", err);
+      console.error("❌ Error handling sendMessage:", err);
       if (ack) ack({ delivered: false, error: err.message });
     }
   });
 
-  // Handle disconnection
   socket.on("disconnect", () => {
     console.log("❌ Disconnected:", socket.id);
-    for (let [wa_id, sId] of onlineUsers.entries()) {
+    for (const [wa_id, sId] of onlineUsers.entries()) {
       if (sId === socket.id) {
         onlineUsers.delete(wa_id);
         break;
@@ -153,7 +178,7 @@ app.get("/api/users", async (req, res) => {
   try {
     const users = await User.find({}, "wa_id name");
     res.json(users);
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to fetch users" });
   }
 });
@@ -172,7 +197,6 @@ app.get("/api/chats", async (req, res) => {
     })
     .populate("from", "wa_id name phone")
     .populate("to", "wa_id name phone")
-
     .sort({ timestamp: 1 });
 
     const chatsMap = {};
@@ -198,7 +222,7 @@ app.get("/api/chats", async (req, res) => {
     });
 
     res.json(Object.values(chatsMap));
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to fetch chats" });
   }
 });
