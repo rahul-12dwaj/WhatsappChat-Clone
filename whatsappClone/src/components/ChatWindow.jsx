@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
+import { FiPhone, FiVideo, FiPaperclip, FiMic } from "react-icons/fi";
+import { BsEmojiSmile } from "react-icons/bs";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 const socket = io(BACKEND_URL, { autoConnect: false });
@@ -9,12 +11,10 @@ export default function ChatWindow({ chat, onBack, userId }) {
   const [messages, setMessages] = useState(chat?.messages || []);
   const messagesEndRef = useRef(null);
 
-  // Scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Socket setup
   useEffect(() => {
     if (!userId || !chat?.id) return;
 
@@ -24,14 +24,12 @@ export default function ChatWindow({ chat, onBack, userId }) {
 
     const handleNewMessage = (msg) => {
       setMessages((prev) => {
-        // Match by server id OR by clientId for optimistic messages
         const exists = prev.find(
           (m) =>
             m.id === msg.id ||
             (m.clientId && msg.clientId && m.clientId === msg.clientId)
         );
         if (exists) {
-          // Update existing message (e.g., status, id from server)
           return prev.map((m) =>
             m.clientId === msg.clientId || m.id === msg.id
               ? { ...m, ...msg }
@@ -67,12 +65,11 @@ export default function ChatWindow({ chat, onBack, userId }) {
     };
   }, [userId, chat]);
 
-  // Send message with clientId
   const handleSend = () => {
     if (!newMessage.trim()) return;
 
     const now = new Date();
-    const clientId = `local-${Date.now()}`; // unique id for matching
+    const clientId = `local-${Date.now()}`;
 
     const msgObj = {
       clientId,
@@ -85,18 +82,15 @@ export default function ChatWindow({ chat, onBack, userId }) {
       name: "You",
     };
 
-
-    // Send to backend
     socket.emit("sendMessage", msgObj);
     setNewMessage("");
   };
 
-  // Render "Seen" status
   const renderSeenStatus = (msg, index) => {
     const isLastMessage =
       index === messages.length - 1 && msg.wa_id === userId;
     return isLastMessage ? (
-      <div className="text-xs text-blue-900 ml-2 justify-end">Seen</div>
+      <div className="text-xs text-blue-400 ml-2 justify-end">Seen</div>
     ) : null;
   };
 
@@ -116,13 +110,13 @@ export default function ChatWindow({ chat, onBack, userId }) {
   }
 
   return (
-    <div className="flex flex-col h-full max-h-full overflow-y-auto">
+    <div className="flex flex-col h-full max-h-full bg-[#111b21] text-[#e9edef]">
       {/* Header */}
-      <div className="bg-green-600 text-white p-4 flex items-center flex-shrink-0">
-        <button onClick={onBack} className="sm:hidden mr-2 text-white font-bold">
-          ←
-        </button>
+      <div className="bg-[#202c33] p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
+          <button onClick={onBack} className="sm:hidden mr-2 font-bold">
+            ←
+          </button>
           {chat.avatar ? (
             <img
               src="./abstract-profile.png"
@@ -130,62 +124,108 @@ export default function ChatWindow({ chat, onBack, userId }) {
               className="w-10 h-10 rounded-full"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center font-semibold select-none">
+            <div className="w-10 h-10 rounded-full bg-gray-600 text-white flex items-center justify-center font-semibold select-none">
               {getInitials(chat.otherUserName)}
             </div>
           )}
           <div>
             <h2 className="font-semibold">{chat.otherUserName}</h2>
-            <p className="text-xs">{chat.phone}</p>
-
+            <p className="text-xs text-[#8696a0]">{chat.phone}</p>
           </div>
+        </div>
+
+        {/* Call buttons */}
+        <div className="flex items-center gap-3 text-[#8696a0]">
+          <button
+            className="p-2 rounded-full hover:bg-[#2a3942] transition-colors duration-200"
+            title="Voice Call"
+            aria-label="Voice Call"
+          >
+            <FiPhone size={20} />
+          </button>
+          <button
+            className="p-2 rounded-full hover:bg-[#2a3942] transition-colors duration-200"
+            title="Video Call"
+            aria-label="Video Call"
+          >
+            <FiVideo size={20} />
+          </button>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-100">
-        {messages.length === 0 ? (
-          <p className="text-center text-gray-500 mt-4">
-            No messages yet. Say hi!
-          </p>
-        ) : (
-          messages.map((msg, index) => {
-            const isSentByUser = msg.wa_id === userId;
-            return (
-              <div
-                key={msg.clientId || msg.id}
-                className={`mb-2 flex ${
-                  isSentByUser ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`p-2 rounded-lg max-w-xs break-words whitespace-pre-wrap ${
-                    isSentByUser
-                      ? "bg-green-500 text-white"
-                      : "bg-white text-gray-800"
-                  }`}
-                >
-                  <p>{msg.text}</p>
-                  <div className="flex items-center justify-end gap-1 mt-1 opacity-70 text-xs">
-                    <span>
-                      {msg.time ||
-                        new Date(msg.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                    </span>
-                    {isSentByUser && renderSeenStatus(msg, index)}
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+<div
+  className="flex-1 overflow-y-auto p-4"
+  style={{
+    backgroundImage: 'url("/background.jpg")',
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundColor: "#e0e0e0" // fallback color, optional
+  }}
+>
+  {messages.length === 0 ? (
+    <p className="text-center text-[#8696a0] mt-4">
+      No messages yet. Say hi!
+    </p>
+  ) : (
+    messages.map((msg, index) => {
+      const isSentByUser = msg.wa_id === userId;
+      return (
+        <div
+          key={msg.clientId || msg.id}
+          className={`mb-2 flex ${
+            isSentByUser ? "justify-end" : "justify-start"
+          }`}
+        >
+          <div
+            className={`p-2 rounded-lg max-w-xs break-words whitespace-pre-wrap ${
+              isSentByUser
+                ? "bg-[#005c4b] text-[#e9edef]"
+                : "bg-[#202c33] text-[#e9edef]"
+            }`}
+          >
+            <p>{msg.text}</p>
+            <div className="flex items-center justify-end gap-1 mt-1 opacity-70 text-xs">
+              <span>
+                {msg.time ||
+                  new Date(msg.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+              </span>
+              {isSentByUser && renderSeenStatus(msg, index)}
+            </div>
+          </div>
+        </div>
+      );
+    })
+  )}
+  <div ref={messagesEndRef} />
+</div>
 
-      {/* Input */}
-      <div className="p-3 bg-white flex items-center gap-2 flex-shrink-0">
+
+      {/* Input Footer */}
+      <div className="p-3 bg-[#202c33] flex items-center gap-2 flex-shrink-0">
+        {/* Emoji button */}
+        <button
+          className="p-2 rounded-full hover:bg-[#2a3942] text-[#8696a0] transition-colors duration-200"
+          title="Emoji"
+          aria-label="Emoji"
+        >
+          <BsEmojiSmile size={22} />
+        </button>
+
+        {/* File share button */}
+        <button
+          className="p-2 rounded-full hover:bg-[#2a3942] text-[#8696a0] transition-colors duration-200"
+          title="Attach"
+          aria-label="Attach file"
+        >
+          <FiPaperclip size={22} />
+        </button>
+
+        {/* Input */}
         <input
           type="text"
           placeholder="Type a message"
@@ -197,12 +237,23 @@ export default function ChatWindow({ chat, onBack, userId }) {
               handleSend();
             }
           }}
-          className="flex-1 p-2 border rounded-full outline-none"
+          className="flex-1 p-2 rounded-full outline-none bg-[#2a3942] text-[#e9edef] placeholder-[#8696a0]"
         />
+
+        {/* Voice message button */}
+        <button
+          className="p-2 rounded-full hover:bg-[#2a3942] text-[#8696a0] transition-colors duration-200"
+          title="Voice message"
+          aria-label="Voice message"
+        >
+          <FiMic size={22} />
+        </button>
+
+        {/* Send button */}
         <button
           onClick={handleSend}
           disabled={!newMessage.trim()}
-          className="bg-green-600 disabled:bg-green-400 text-white px-4 py-2 rounded-full"
+          className="bg-[#005c4b] disabled:bg-[#025144] text-white px-4 py-2 rounded-full transition-colors duration-200"
         >
           Send
         </button>
