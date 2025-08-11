@@ -3,36 +3,34 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 export default async function loadChats(userId) {
   if (!userId) return [];
 
-  // Optional: set a timeout for fetch (e.g., 10 seconds)
+  // Timeout controller for fetch request (10 seconds)
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/chats?userId=${userId}`, {
+    const response = await fetch(`${BACKEND_URL}/api/chats?userId=${userId}`, {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
 
-    if (!res.ok) {
-      throw new Error(`Failed to load chats: ${res.status} ${res.statusText}`);
+    if (!response.ok) {
+      throw new Error(`Failed to load chats: ${response.status} ${response.statusText}`);
     }
 
-    const data = await res.json();
+    const data = await response.json();
 
-    // Optional: Basic validation (ensure it's an array)
+    // Basic validation to ensure data is an array
     if (!Array.isArray(data)) {
-      console.warn("loadChats: Response data is not an array", data);
+      console.warn("loadChats: Expected array but received:", data);
       return [];
     }
 
-    // Optional: you can validate chat structure here if needed
-
     return data;
-  } catch (err) {
-    if (err.name === "AbortError") {
-      console.error("loadChats: Fetch aborted due to timeout");
+  } catch (error) {
+    if (error.name === "AbortError") {
+      console.error("loadChats: Request timed out");
     } else {
-      console.error("Error loading chats:", err);
+      console.error("loadChats: Error loading chats:", error);
     }
     return [];
   }

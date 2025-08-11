@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 import ChatList from "./components/ChatList";
 import ChatWindow from "./components/ChatWindow";
 import loadChats from "./loadChats";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const socket = io(BACKEND_URL);
 
 function App() {
   const [testUsers, setTestUsers] = useState([]); // [{ wa_id, name }]
@@ -30,23 +32,20 @@ function App() {
     fetchUsers();
   }, []);
 
-  // Load chats whenever userId or testUsers changes
+  // Load chats & setup socket listeners when userId or testUsers change
   useEffect(() => {
     if (!userId) return;
 
     async function fetchChats() {
       try {
         const data = await loadChats(userId);
-        // data = array of chats; each chat.id is the other user's wa_id
-
-        // Add otherUserName for each chat from testUsers by wa_id = chat.id
         const chatsWithNames = data.map((chat) => ({
           ...chat,
           otherUserWaId: chat.id,
           otherUserName:
             testUsers.find((u) => u.wa_id === chat.id)?.name || "Unknown",
+          messages: chat.messages || [], // Ensure messages array exists
         }));
-
         setChats(chatsWithNames);
       } catch (error) {
         console.error("Failed to load chats:", error);
@@ -56,6 +55,53 @@ function App() {
 
     fetchChats();
     setSelectedChatId(null);
+
+    // Register user on socket
+    socket.emit("register", userId);
+
+    // Listen for new messages
+    const handleNewMessage = (msg) => {
+      if (msg.wa_id === userId || msg.to === userId) {
+        const chatPartnerId = msg.wa_id === userId ? msg.to : msg.wa_id;
+
+        setChats((prevChats) => {
+          const chatIndex = prevChats.findIndex((c) => c.id === chatPartnerId);
+
+          if (chatIndex === -1) {
+            // New chat, add it at the top
+            const newChat = {
+              id: chatPartnerId,
+              otherUserWaId: chatPartnerId,
+              otherUserName:
+                testUsers.find((u) => u.wa_id === chatPartnerId)?.name || "Unknown",
+              avatar: "/default-avatar.png",
+              messages: [msg],
+              lastMessage: msg.text,
+              time: msg.time,
+              status: msg.status,
+            };
+            return [newChat, ...prevChats];
+          } else {
+            // Existing chat: update messages and last message info
+            const updatedChat = { ...prevChats[chatIndex] };
+            updatedChat.messages = [...updatedChat.messages, msg];
+            updatedChat.lastMessage = msg.text;
+            updatedChat.time = msg.time;
+            updatedChat.status = msg.status;
+
+            // Move updated chat to front
+            const newChats = prevChats.filter((_, i) => i !== chatIndex);
+            return [updatedChat, ...newChats];
+          }
+        });
+      }
+    };
+
+    socket.on("newMessage", handleNewMessage);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
   }, [userId, testUsers]);
 
   // Sort chats by last message timestamp descending
@@ -69,10 +115,14 @@ function App() {
 
   const handleBackToList = () => setSelectedChatId(null);
 
-  const handleSendMessage = async (chatId, newMessage) => {
-    const receiverWaId = chatId; // chat.id === otherUserWaId
+  // Send message handler with optimistic update
+  const handleSendMessage = (chatId, newMessage) => {
+    // Ensure the message object has needed properties
+    const msgObj = {
+      ...newMessage,
+      to: chatId,
+    };
 
-    // Optimistic UI update
     setChats((prevChats) =>
       prevChats.map((chat) =>
         chat.id === chatId
@@ -86,41 +136,17 @@ function App() {
                   hour: "2-digit",
                   minute: "2-digit",
                 }),
+              status: newMessage.status || "sent",
             }
           : chat
       )
     );
 
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wa_id: userId,
-          to: receiverWaId,
-          text: newMessage.text,
-          name: newMessage.name || "Unknown",
-        }),
-      });
-
-      if (!response.ok) {
-        console.error("Failed to send message:", response.statusText);
-      } else {
-        // Refresh chats after send
-        const updatedChats = await loadChats(userId);
-        const chatsWithNames = updatedChats.map((chat) => ({
-          ...chat,
-          otherUserWaId: chat.id,
-          otherUserName:
-            testUsers.find((u) => u.wa_id === chat.id)?.name || "Unknown",
-        }));
-        setChats(chatsWithNames);
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
+    // Emit to server via socket
+    socket.emit("sendMessage", msgObj);
   };
 
+  // User toggle to switch active user (test mode)
   const toggleUser = () => {
     if (testUsers.length < 2) return;
     setUserId((prev) => {
@@ -156,7 +182,6 @@ function App() {
       <div className="flex flex-grow overflow-hidden">
         {/* Desktop Layout */}
         <div className="hidden sm:flex w-full">
-          {/* Chat List - scrollable */}
           <div className="w-1/3 border-r border-gray-300 overflow-y-auto">
             <ChatList
               chats={sortedChats}
@@ -165,8 +190,6 @@ function App() {
               userId={userId}
             />
           </div>
-
-          {/* Chat Window - centered, no page scroll */}
           <div className="w-2/3 flex items-center justify-center bg-gray-50">
             {selectedChat ? (
               <div className="w-full max-h-full flex flex-col overflow-hidden">

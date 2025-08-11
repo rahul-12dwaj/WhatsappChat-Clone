@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 function getInitials(name = "") {
   return name
@@ -8,13 +8,29 @@ function getInitials(name = "") {
     .slice(0, 2);
 }
 
-export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
+export default function ChatList({
+  chats = [],
+  onSelectChat,
+  selectedChatId,
+  newMessage, // optional prop if you want to highlight it
+}) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [filteredChats, setFilteredChats] = useState([]);
 
-  // Filter chats by otherUserName (case insensitive)
-  const filteredChats = chats.filter((chat) =>
-    chat.otherUserName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter chats based on search term
+  useEffect(() => {
+    const filtered = chats.filter((chat) =>
+      chat.otherUserName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredChats(filtered);
+  }, [chats, searchTerm]);
+
+  // Optionally, you can reorder chats on newMessage arrival (if chats not already sorted in parent)
+  useEffect(() => {
+    if (!newMessage) return;
+    // No reorder here because parent should handle sorting, but if you want:
+    // Could move chat with newMessage.to or newMessage.wa_id to top
+  }, [newMessage]);
 
   const handleSelectChat = useCallback(
     (id) => () => {
@@ -34,7 +50,11 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
   );
 
   return (
-    <div className="w-full border-r border-gray-300 flex flex-col overflow-x-hidden  min-w-0 h-screen">
+    <div
+      className="w-full border-r border-gray-300 flex flex-col overflow-x-hidden min-w-0 h-screen"
+      role="list"
+      aria-label="Chat list"
+    >
       {/* Search Bar */}
       <div className="p-2">
         <input
@@ -44,11 +64,12 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full p-2 rounded-md bg-gray-100 outline-none"
+          autoComplete="off"
         />
       </div>
 
-      {/* Chat List */}
-      <div className="flex-1 overflow-y-hidden" role="list" aria-label="Chat list">
+      {/* Chats */}
+      <div className="flex-1 overflow-y-auto">
         {filteredChats.length > 0 ? (
           filteredChats.map((chat) => {
             const isSelected = selectedChatId === chat.id;
@@ -56,8 +77,11 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
             const lastMessage = chat.lastMessage || "";
             const time = chat.time || "";
 
-            // Optionally highlight unread chats
-            const isUnread = chat.status === "delivered" || chat.status === "received";
+            // Highlight unread chats (tweak condition as per your logic)
+            const isUnread =
+              chat.status === "delivered" ||
+              chat.status === "received" ||
+              (chat.unreadCount && chat.unreadCount > 0);
 
             return (
               <div
@@ -66,10 +90,11 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
                 tabIndex={0}
                 onClick={handleSelectChat(chat.id)}
                 onKeyDown={handleKeyDown(chat.id)}
-                className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-100 min-w-0 outline-none ${
+                className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-100 min-w-0 outline-none select-none ${
                   isSelected ? "bg-gray-200" : ""
                 }`}
                 aria-current={isSelected ? "true" : "false"}
+                aria-label={`Chat with ${chat.otherUserName}, last message ${lastMessage}`}
               >
                 {chat.avatar ? (
                   <img
@@ -78,7 +103,6 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
                     className="w-10 h-10 rounded-full flex-shrink-0"
                     loading="lazy"
                   />
-
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center font-semibold flex-shrink-0 select-none">
                     {initials}
@@ -108,7 +132,11 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
             );
           })
         ) : (
-          <div className="text-center text-gray-500 mt-4 text-sm" role="alert" aria-live="polite">
+          <div
+            className="text-center text-gray-500 mt-4 text-sm"
+            role="alert"
+            aria-live="polite"
+          >
             No chats found
           </div>
         )}
