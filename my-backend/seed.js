@@ -50,6 +50,24 @@ async function seed() {
       phone: "9123456780",
     });
 
+    const anjali = await User.create({
+      wa_id: "wa_anjali789",
+      name: "Anjali Sharma",
+      phone: "9988776655",
+    });
+
+    const sameer = await User.create({
+      wa_id: "wa_sameer321",
+      name: "Sameer Singh",
+      phone: "9012345678",
+    });
+
+    const priya = await User.create({
+      wa_id: "wa_priya654",
+      name: "Priya Verma",
+      phone: "9001122334",
+    });
+
     // Helper to format time
     const formatTime = (date) =>
       date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -107,6 +125,38 @@ async function seed() {
         time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 22)),
         timestamp: now.getTime() - 1000 * 60 * 60 * 22,
         status: "read",
+      },
+      // New messages between Anjali and Sameer
+      {
+        id: "msg6",
+        from: anjali._id,
+        to: sameer._id,
+        text: "Hey Sameer, did you check the report?",
+        sent: true,
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 10)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 10,
+        status: "delivered",
+      },
+      {
+        id: "msg7",
+        from: sameer._id,
+        to: anjali._id,
+        text: "Yes, looks good. I'll send feedback soon.",
+        sent: true,
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 9.5)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 9.5,
+        status: "read",
+      },
+      // One message from Priya to Neha (one sided chat)
+      {
+        id: "msg8",
+        from: priya._id,
+        to: neha._id,
+        text: "Hi Neha, can we catch up this weekend?",
+        sent: true,
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 5)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 5,
+        status: "sent",
       },
     ];
 

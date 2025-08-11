@@ -1,6 +1,6 @@
 function EmptyState() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-between bg-[#111b21] text-[#8696a0] select-none px-6 py-8 w-full">
+    <div className="flex-1 flex flex-col items-center justify-center bg-[#111b21] text-[#8696a0] select-none px-6 py-8 w-full">
       {/* Logo */}
       <img
         src="/whatsapp.png"
