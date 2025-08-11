@@ -23,13 +23,24 @@ export default function ChatWindow({ chat, onBack, userId }) {
     setMessages(chat?.messages || []);
 
     const handleNewMessage = (msg) => {
-  // Ignore if message was sent by this client and we already have it
-  setMessages((prev) => {
-    if (prev.some((m) => m.id === msg.id)) return prev;
-    return [...prev, msg];
-  });
-};
-
+      setMessages((prev) => {
+        // Match by server id OR by clientId for optimistic messages
+        const exists = prev.find(
+          (m) =>
+            m.id === msg.id ||
+            (m.clientId && msg.clientId && m.clientId === msg.clientId)
+        );
+        if (exists) {
+          // Update existing message (e.g., status, id from server)
+          return prev.map((m) =>
+            m.clientId === msg.clientId || m.id === msg.id
+              ? { ...m, ...msg }
+              : m
+          );
+        }
+        return [...prev, msg];
+      });
+    };
 
     const handleMessageSent = (msg) => {
       setMessages((prev) =>
@@ -56,13 +67,15 @@ export default function ChatWindow({ chat, onBack, userId }) {
     };
   }, [userId, chat]);
 
-  // Send message
+  // Send message with clientId
   const handleSend = () => {
     if (!newMessage.trim()) return;
 
     const now = new Date();
+    const clientId = `local-${Date.now()}`; // unique id for matching
+
     const msgObj = {
-      id: Date.now().toString(),
+      clientId,
       text: newMessage.trim(),
       wa_id: userId,
       to: chat.id,
@@ -72,11 +85,8 @@ export default function ChatWindow({ chat, onBack, userId }) {
       name: "You",
     };
 
-    setMessages((prev) => {
-      if (prev.some((m) => m.id === msgObj.id)) return prev;
-      return [...prev, msgObj];
-    });
 
+    // Send to backend
     socket.emit("sendMessage", msgObj);
     setNewMessage("");
   };
@@ -142,7 +152,7 @@ export default function ChatWindow({ chat, onBack, userId }) {
             const isSentByUser = msg.wa_id === userId;
             return (
               <div
-                key={msg.id}
+                key={msg.clientId || msg.id}
                 className={`mb-2 flex ${
                   isSentByUser ? "justify-end" : "justify-start"
                 }`}
