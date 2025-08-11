@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 
 function getInitials(name = "") {
   return name
@@ -8,30 +8,15 @@ function getInitials(name = "") {
     .slice(0, 2);
 }
 
-export default function ChatList({
-  chats = [],
-  onSelectChat,
-  selectedChatId,
-  newMessage, // optional prop if you want to highlight it
-}) {
+export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredChats, setFilteredChats] = useState([]);
 
-  // Filter chats based on search term
-  useEffect(() => {
-    const filtered = chats.filter((chat) =>
-      chat.otherUserName?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredChats(filtered);
-  }, [chats, searchTerm]);
+  // Filter chats by otherUserName (case insensitive)
+  const filteredChats = chats.filter((chat) =>
+    chat.otherUserName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // Optionally, you can reorder chats on newMessage arrival (if chats not already sorted in parent)
-  useEffect(() => {
-    if (!newMessage) return;
-    // No reorder here because parent should handle sorting, but if you want:
-    // Could move chat with newMessage.to or newMessage.wa_id to top
-  }, [newMessage]);
-
+  // Stable callback to handle chat selection
   const handleSelectChat = useCallback(
     (id) => () => {
       onSelectChat(id);
@@ -39,6 +24,7 @@ export default function ChatList({
     [onSelectChat]
   );
 
+  // Keyboard accessibility for chat selection
   const handleKeyDown = useCallback(
     (id) => (e) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -77,7 +63,7 @@ export default function ChatList({
             const lastMessage = chat.lastMessage || "";
             const time = chat.time || "";
 
-            // Highlight unread chats (tweak condition as per your logic)
+            // Highlight unread chats - tweak the condition as per your app logic
             const isUnread =
               chat.status === "delivered" ||
               chat.status === "received" ||

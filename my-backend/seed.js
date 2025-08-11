@@ -1,13 +1,20 @@
+// seed.js
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 
 dotenv.config();
 
+// ==== SCHEMAS ====
+const userSchema = new mongoose.Schema({
+  wa_id: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  phone: { type: String, required: true, match: /^\d{10}$/ },
+});
+
 const messageSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
-  wa_id: { type: String, required: true },
-  to: { type: String, required: true },
-  name: String,
+  from: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  to: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   text: String,
   sent: Boolean,
   time: String,
@@ -15,6 +22,7 @@ const messageSchema = new mongoose.Schema({
   status: String,
 });
 
+const User = mongoose.model("User", userSchema);
 const Message = mongoose.model("Message", messageSchema);
 
 async function seed() {
@@ -23,88 +31,93 @@ async function seed() {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log("MongoDB connected for seeding");
+    console.log("✅ MongoDB connected for seeding");
 
-    // Clear existing messages
+    // Clear existing data
     await Message.deleteMany({});
+    await User.deleteMany({});
 
-    // Define users
-    const neha = {
+    // ==== USERS ====
+    const neha = await User.create({
       wa_id: "wa_neha123",
       name: "Neha Joshi",
-    };
+      phone: "9876543210",
+    });
 
-    const ravi = {
+    const ravi = await User.create({
       wa_id: "wa_ravi456",
       name: "Ravi Kumar",
-    };
+      phone: "9123456780",
+    });
 
-    // Sample chat messages between Neha and Ravi
+    // Helper to format time
+    const formatTime = (date) =>
+      date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    const now = new Date();
+
+    // ==== MESSAGES ====
     const messages = [
       {
         id: "msg1",
-        wa_id: neha.wa_id,
-        to: ravi.wa_id,
-        name: neha.name,
+        from: neha._id,
+        to: ravi._id,
         text: "Hey Ravi, how are you?",
         sent: true,
-        time: "10:00",
-        timestamp: Date.now() - 1000 * 60 * 60 * 24, // 1 day ago
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 24)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 24,
         status: "read",
       },
       {
         id: "msg2",
-        wa_id: ravi.wa_id,
-        to: neha.wa_id,
-        name: ravi.name,
+        from: ravi._id,
+        to: neha._id,
         text: "Hi Neha! I'm good, thanks. How about you?",
         sent: true,
-        time: "10:02",
-        timestamp: Date.now() - 1000 * 60 * 60 * 23.5, // 23.5 hours ago
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 23.5)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 23.5,
         status: "read",
       },
       {
         id: "msg3",
-        wa_id: neha.wa_id,
-        to: ravi.wa_id,
-        name: neha.name,
+        from: neha._id,
+        to: ravi._id,
         text: "Doing well! Are we still on for the meeting tomorrow?",
         sent: true,
-        time: "10:05",
-        timestamp: Date.now() - 1000 * 60 * 60 * 23, // 23 hours ago
-        status: "delivered",
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 23)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 23,
+        status: "read",
       },
       {
         id: "msg4",
-        wa_id: ravi.wa_id,
-        to: neha.wa_id,
-        name: ravi.name,
+        from: ravi._id,
+        to: neha._id,
         text: "Yes, absolutely. See you then.",
         sent: true,
-        time: "10:10",
-        timestamp: Date.now() - 1000 * 60 * 60 * 22.5, // 22.5 hours ago
-        status: "sent",
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 22.5)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 22.5,
+        status: "read",
       },
       {
         id: "msg5",
-        wa_id: neha.wa_id,
-        to: ravi.wa_id,
-        name: neha.name,
+        from: neha._id,
+        to: ravi._id,
         text: "Great! Have a good day.",
         sent: true,
-        time: "10:15",
-        timestamp: Date.now() - 1000 * 60 * 60 * 22, // 22 hours ago
-        status: "sent",
+        time: formatTime(new Date(now.getTime() - 1000 * 60 * 60 * 22)),
+        timestamp: now.getTime() - 1000 * 60 * 60 * 22,
+        status: "read",
       },
     ];
 
     await Message.insertMany(messages);
-    console.log("Seed data inserted successfully");
+
+    console.log("✅ Seed data inserted successfully");
 
     await mongoose.disconnect();
-    console.log("MongoDB disconnected");
+    console.log("🔌 MongoDB disconnected");
   } catch (err) {
-    console.error("Error during seeding:", err);
+    console.error("❌ Error during seeding:", err);
   }
 }
 

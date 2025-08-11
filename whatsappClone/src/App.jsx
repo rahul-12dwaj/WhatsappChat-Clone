@@ -1,30 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 import ChatList from "./components/ChatList";
 import ChatWindow from "./components/ChatWindow";
 import loadChats from "./loadChats";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-const socket = io(BACKEND_URL);
+const socket = io(BACKEND_URL, { autoConnect: true });
 
 function App() {
-  const [testUsers, setTestUsers] = useState([]); // [{ wa_id, name }]
-  const [userId, setUserId] = useState(null);
+  const [testUsers, setTestUsers] = useState([]);
+  const [userId, setUserId] = useState(() => localStorage.getItem("wa_id") || null);
   const [chats, setChats] = useState([]);
   const [selectedChatId, setSelectedChatId] = useState(null);
 
-  // Fetch users once on mount
+  // Fetch users once
   useEffect(() => {
     async function fetchUsers() {
       try {
         const res = await fetch(`${BACKEND_URL}/api/users`);
-        if (!res.ok) {
-          console.error("Failed to fetch users:", res.status);
-          return;
-        }
+        if (!res.ok) throw new Error(`Failed to fetch users: ${res.status}`);
         const users = await res.json();
         setTestUsers(users);
-        if (users.length > 0) setUserId(users[0].wa_id);
+
+        // Auto-select first user if none stored
+        if (!userId && users.length > 0) {
+          const firstUser = users[0].wa_id;
+          setUserId(firstUser);
+          localStorage.setItem("wa_id", firstUser);
+        }
       } catch (error) {
         console.error("Failed to load users:", error);
       }
@@ -32,173 +35,149 @@ function App() {
     fetchUsers();
   }, []);
 
-  // Load chats & setup socket listeners when userId or testUsers change
+  // Load chats & setup socket only when userId changes
   useEffect(() => {
     if (!userId) return;
 
-    async function fetchChats() {
+    const fetchChats = async () => {
       try {
         const data = await loadChats(userId);
-        const chatsWithNames = data.map((chat) => ({
-          ...chat,
-          otherUserWaId: chat.id,
-          otherUserName:
-            testUsers.find((u) => u.wa_id === chat.id)?.name || "Unknown",
-          messages: chat.messages || [], // Ensure messages array exists
-        }));
-        setChats(chatsWithNames);
+        const chatsWithExtras = data.map(chat => {
+          const lastMsg = chat.messages?.[chat.messages.length - 1] || {};
+          return {
+            ...chat,
+            otherUserWaId: chat.id,
+            otherUserName: testUsers.find(u => u.wa_id === chat.id)?.name || "Unknown",
+            messages: chat.messages || [],
+            lastMessage: lastMsg.text || "",
+            time: lastMsg.time || "",
+            status: lastMsg.status || "",
+          };
+        });
+        setChats(chatsWithExtras);
       } catch (error) {
         console.error("Failed to load chats:", error);
-        setChats([]);
       }
-    }
+    };
 
     fetchChats();
     setSelectedChatId(null);
 
-    // Register user on socket
-    socket.emit("register", userId);
+    // Socket: register on connect
+    const handleConnect = () => {
+      console.log("🔌 Socket connected:", socket.id);
+      socket.emit("register", userId);
+    };
 
-    // Listen for new messages
+    // Socket: handle incoming message
     const handleNewMessage = (msg) => {
       if (msg.wa_id === userId || msg.to === userId) {
         const chatPartnerId = msg.wa_id === userId ? msg.to : msg.wa_id;
 
-        setChats((prevChats) => {
-          const chatIndex = prevChats.findIndex((c) => c.id === chatPartnerId);
-
-          if (chatIndex === -1) {
-            // New chat, add it at the top
-            const newChat = {
+        setChats(prevChats => {
+          const idx = prevChats.findIndex(c => c.id === chatPartnerId);
+          if (idx === -1) {
+            // New chat
+            return [{
               id: chatPartnerId,
               otherUserWaId: chatPartnerId,
-              otherUserName:
-                testUsers.find((u) => u.wa_id === chatPartnerId)?.name || "Unknown",
+              otherUserName: testUsers.find(u => u.wa_id === chatPartnerId)?.name || "Unknown",
               avatar: "/default-avatar.png",
               messages: [msg],
               lastMessage: msg.text,
               time: msg.time,
               status: msg.status,
-            };
-            return [newChat, ...prevChats];
+            }, ...prevChats];
           } else {
-            // Existing chat: update messages and last message info
-            const updatedChat = { ...prevChats[chatIndex] };
+            // Existing chat
+            const updatedChat = { ...prevChats[idx] };
             updatedChat.messages = [...updatedChat.messages, msg];
             updatedChat.lastMessage = msg.text;
             updatedChat.time = msg.time;
             updatedChat.status = msg.status;
-
-            // Move updated chat to front
-            const newChats = prevChats.filter((_, i) => i !== chatIndex);
+            const newChats = prevChats.filter((_, i) => i !== idx);
             return [updatedChat, ...newChats];
           }
         });
       }
     };
 
+    // Attach listeners once
+    socket.on("connect", handleConnect);
     socket.on("newMessage", handleNewMessage);
 
     return () => {
+      socket.off("connect", handleConnect);
       socket.off("newMessage", handleNewMessage);
     };
   }, [userId, testUsers]);
 
-  // Sort chats by last message timestamp descending
+  // Sort chats by latest timestamp
   const sortedChats = [...chats].sort((a, b) => {
     const timeA = a.messages[a.messages.length - 1]?.timestamp || 0;
     const timeB = b.messages[b.messages.length - 1]?.timestamp || 0;
     return timeB - timeA;
   });
 
-  const selectedChat = sortedChats.find((chat) => chat.id === selectedChatId);
+  const selectedChat = sortedChats.find(chat => chat.id === selectedChatId);
 
-  const handleBackToList = () => setSelectedChatId(null);
+  const handleSendMessage = useCallback((chatId, newMessage) => {
+    const msgObj = { ...newMessage, to: chatId };
 
-  // Send message handler with optimistic update
-  const handleSendMessage = (chatId, newMessage) => {
-    // Ensure the message object has needed properties
-    const msgObj = {
-      ...newMessage,
-      to: chatId,
-    };
-
-    setChats((prevChats) =>
-      prevChats.map((chat) =>
+    // Optimistic UI update
+    setChats(prevChats =>
+      prevChats.map(chat =>
         chat.id === chatId
           ? {
               ...chat,
               messages: [...chat.messages, newMessage],
               lastMessage: newMessage.text,
-              time:
-                newMessage.time ||
-                new Date().toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
+              time: newMessage.time || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
               status: newMessage.status || "sent",
             }
           : chat
       )
     );
 
-    // Emit to server via socket
     socket.emit("sendMessage", msgObj);
-  };
+  }, []);
 
-  // User toggle to switch active user (test mode)
   const toggleUser = () => {
     if (testUsers.length < 2) return;
-    setUserId((prev) => {
-      const idx = testUsers.findIndex((user) => user.wa_id === prev);
-      return testUsers[(idx + 1) % testUsers.length].wa_id;
+    setUserId(prev => {
+      const idx = testUsers.findIndex(user => user.wa_id === prev);
+      const nextId = testUsers[(idx + 1) % testUsers.length].wa_id;
+      localStorage.setItem("wa_id", nextId);
+      return nextId;
     });
     setSelectedChatId(null);
     setChats([]);
   };
 
-  const currentUserName =
-    testUsers.find((user) => user.wa_id === userId)?.name || "Loading...";
+  const currentUserName = testUsers.find(user => user.wa_id === userId)?.name || "Loading...";
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* Header */}
       <header className="p-4 bg-gray-800 text-white flex justify-between items-center flex-shrink-0">
         <h1 className="text-xl font-bold">WhatsApp Clone - Test Mode</h1>
         <button
           onClick={toggleUser}
           disabled={testUsers.length < 2}
-          className={`px-3 py-1 rounded ${
-            testUsers.length < 2
-              ? "bg-gray-500 cursor-not-allowed"
-              : "bg-green-600 hover:bg-green-700"
-          }`}
+          className={`px-3 py-1 rounded ${testUsers.length < 2 ? "bg-gray-500 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
         >
           Switch User (Current: {currentUserName})
         </button>
       </header>
 
-      {/* Main Content */}
       <div className="flex flex-grow overflow-hidden">
-        {/* Desktop Layout */}
         <div className="hidden sm:flex w-full">
           <div className="w-1/3 border-r border-gray-300 overflow-y-auto">
-            <ChatList
-              chats={sortedChats}
-              onSelectChat={setSelectedChatId}
-              selectedChatId={selectedChatId}
-              userId={userId}
-            />
+            <ChatList chats={sortedChats} onSelectChat={setSelectedChatId} selectedChatId={selectedChatId} userId={userId} />
           </div>
           <div className="w-2/3 flex items-center justify-center bg-gray-50">
             {selectedChat ? (
-              <div className="w-full max-h-full flex flex-col overflow-hidden">
-                <ChatWindow
-                  chat={selectedChat}
-                  onBack={handleBackToList}
-                  onSendMessage={handleSendMessage}
-                  userId={userId}
-                />
+              <div className="w-full max-h-full flex flex-col overflow-hidden h-screen">
+                <ChatWindow chat={selectedChat} onBack={() => setSelectedChatId(null)} onSendMessage={handleSendMessage} userId={userId} />
               </div>
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -208,26 +187,16 @@ function App() {
           </div>
         </div>
 
-        {/* Mobile Layout */}
+        {/* Mobile layout */}
         <div className="flex sm:hidden w-full h-full overflow-hidden">
           {!selectedChatId ? (
             <div className="w-full h-full overflow-y-auto">
-              <ChatList
-                chats={sortedChats}
-                onSelectChat={setSelectedChatId}
-                selectedChatId={selectedChatId}
-                userId={userId}
-              />
+              <ChatList chats={sortedChats} onSelectChat={setSelectedChatId} selectedChatId={selectedChatId} userId={userId} />
             </div>
           ) : (
             <div className="w-full flex items-center justify-center h-full bg-gray-50">
               <div className="w-full max-h-full flex flex-col overflow-hidden">
-                <ChatWindow
-                  chat={selectedChat}
-                  onBack={handleBackToList}
-                  onSendMessage={handleSendMessage}
-                  userId={userId}
-                />
+                <ChatWindow chat={selectedChat} onBack={() => setSelectedChatId(null)} onSendMessage={handleSendMessage} userId={userId} />
               </div>
             </div>
           )}

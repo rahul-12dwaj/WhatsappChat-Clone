@@ -2,99 +2,92 @@ import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
-// Initialize socket outside component to avoid multiple connections
-const socket = io(BACKEND_URL);
+const socket = io(BACKEND_URL, { autoConnect: false });
 
 export default function ChatWindow({ chat, onBack, userId }) {
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState(chat?.messages || []);
   const messagesEndRef = useRef(null);
 
-  // Scroll to bottom on messages update
+  // Scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Register userId on socket connect and update messages when chat changes
+  // Socket setup
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !chat?.id) return;
 
-    // Register user to socket server
+    if (!socket.connected) socket.connect();
     socket.emit("register", userId);
-
-    // Update local messages when chat changes
     setMessages(chat?.messages || []);
 
-    // Handle incoming messages for this chat
     const handleNewMessage = (msg) => {
-      if (
-        (msg.wa_id === userId && msg.to === chat.id) ||
-        (msg.wa_id === chat.id && msg.to === userId)
-      ) {
-        setMessages((prev) => [...prev, msg]);
-      }
+  // Ignore if message was sent by this client and we already have it
+  setMessages((prev) => {
+    if (prev.some((m) => m.id === msg.id)) return prev;
+    return [...prev, msg];
+  });
+};
+
+
+    const handleMessageSent = (msg) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msg.id ? { ...m, status: msg.status || "sent" } : m
+        )
+      );
     };
 
-    // Handle confirmation of sent message from server
-    const handleMessageSent = (msg) => {
-      if (
-        (msg.wa_id === userId && msg.to === chat.id) ||
-        (msg.wa_id === chat.id && msg.to === userId)
-      ) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === msg.id)) return prev;
-          return [...prev, msg];
-        });
-      }
+    const handleStatusUpdate = ({ messageId, status }) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, status } : m))
+      );
     };
 
     socket.on("newMessage", handleNewMessage);
     socket.on("messageSent", handleMessageSent);
+    socket.on("messageStatusUpdated", handleStatusUpdate);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
       socket.off("messageSent", handleMessageSent);
+      socket.off("messageStatusUpdated", handleStatusUpdate);
     };
   }, [userId, chat]);
 
-  if (!chat) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
-        No chat selected
-      </div>
-    );
-  }
-
+  // Send message
   const handleSend = () => {
     if (!newMessage.trim()) return;
 
     const now = new Date();
     const msgObj = {
       id: Date.now().toString(),
-      text: newMessage,
+      text: newMessage.trim(),
       wa_id: userId,
       to: chat.id,
-      sent: true,
       time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       timestamp: now.getTime(),
-      status: "sent",
-      name: "You", // or fetch actual user name if available
+      status: "pending",
+      name: "You",
     };
 
-    // Emit message via socket
-    socket.emit("sendMessage", msgObj);
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msgObj.id)) return prev;
+      return [...prev, msgObj];
+    });
 
-    // Optimistically add message to local state
-    setMessages((prev) => [...prev, msgObj]);
+    socket.emit("sendMessage", msgObj);
     setNewMessage("");
   };
 
-  const renderStatusIcon = (status) => {
-    if (status === "sent") return <span>✓</span>;
-    if (status === "delivered") return <span>✓✓</span>;
-    if (status === "read") return <span className="text-blue-400">✓✓</span>;
-    return null;
+  // Render "Seen" status
+  const renderSeenStatus = (msg, index) => {
+    const isLastMessage =
+      index === messages.length - 1 && msg.wa_id === userId;
+    return isLastMessage ? (
+      <div className="text-xs text-blue-900 ml-2 justify-end">Seen</div>
+    ) : null;
   };
 
   const getInitials = (name = "") =>
@@ -104,14 +97,19 @@ export default function ChatWindow({ chat, onBack, userId }) {
       .join("")
       .slice(0, 2);
 
+  if (!chat) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-gray-500">
+        No chat selected
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full max-h-full overflow-y-auto">
       {/* Header */}
       <div className="bg-green-600 text-white p-4 flex items-center flex-shrink-0">
-        <button
-          onClick={onBack}
-          className="sm:hidden mr-2 text-white font-bold"
-        >
+        <button onClick={onBack} className="sm:hidden mr-2 text-white font-bold">
           ←
         </button>
         <div className="flex items-center gap-3">
@@ -136,13 +134,15 @@ export default function ChatWindow({ chat, onBack, userId }) {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 bg-gray-100">
         {messages.length === 0 ? (
-          <p className="text-center text-gray-500 mt-4">No messages yet. Say hi!</p>
+          <p className="text-center text-gray-500 mt-4">
+            No messages yet. Say hi!
+          </p>
         ) : (
           messages.map((msg, index) => {
             const isSentByUser = msg.wa_id === userId;
             return (
               <div
-                key={`${msg.id}-${index}`}
+                key={msg.id}
                 className={`mb-2 flex ${
                   isSentByUser ? "justify-end" : "justify-start"
                 }`}
@@ -163,7 +163,7 @@ export default function ChatWindow({ chat, onBack, userId }) {
                           minute: "2-digit",
                         })}
                     </span>
-                    {isSentByUser && renderStatusIcon(msg.status)}
+                    {isSentByUser && renderSeenStatus(msg, index)}
                   </div>
                 </div>
               </div>
@@ -173,7 +173,7 @@ export default function ChatWindow({ chat, onBack, userId }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
+      {/* Input */}
       <div className="p-3 bg-white flex items-center gap-2 flex-shrink-0">
         <input
           type="text"
