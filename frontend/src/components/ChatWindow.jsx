@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { FiPhone, FiVideo, FiPaperclip, FiMic } from "react-icons/fi";
 import { BsEmojiSmile } from "react-icons/bs";
@@ -8,49 +8,75 @@ const socket = io(BACKEND_URL, { autoConnect: false });
 
 export default function ChatWindow({ chat, onBack, userId }) {
   const [newMessage, setNewMessage] = useState("");
-  const [messages, setMessages] = useState(chat?.messages || []);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
 
-  useEffect(() => {
+  // Scroll to bottom whenever messages change
+  useLayoutEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Fetch all messages for selected chat
+  useEffect(() => {
+    if (!chat?.id) return;
+    setLoading(true);
+
+    async function fetchMessages() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/messages/${chat.id}`);
+        if (!res.ok) throw new Error(`Failed to fetch messages: ${res.status}`);
+        const msgs = await res.json();
+        setMessages(msgs);
+      } catch (err) {
+        console.error("Error fetching messages:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMessages();
+  }, [chat?.id]);
+
+  // Socket listeners
   useEffect(() => {
     if (!userId || !chat?.id) return;
 
     if (!socket.connected) socket.connect();
     socket.emit("register", userId);
-    setMessages(chat?.messages || []);
 
     const handleNewMessage = (msg) => {
-      setMessages((prev) => {
-        const exists = prev.find(
-          (m) =>
-            m.id === msg.id ||
-            (m.clientId && msg.clientId && m.clientId === msg.clientId)
-        );
-        if (exists) {
-          return prev.map((m) =>
-            m.clientId === msg.clientId || m.id === msg.id
-              ? { ...m, ...msg }
-              : m
+      if (msg.wa_id === chat.id || msg.to === chat.id) {
+        setMessages((prev) => {
+          const exists = prev.some(
+            (m) => m.id === msg.id || m.clientId === msg.clientId
           );
-        }
-        return [...prev, msg];
-      });
+          return exists
+            ? prev.map((m) =>
+                m.clientId === msg.clientId || m.id === msg.id
+                  ? { ...m, ...msg }
+                  : m
+              )
+            : [...prev, msg];
+        });
+      }
     };
 
     const handleMessageSent = (msg) => {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === msg.id ? { ...m, status: msg.status || "sent" } : m
+          m.clientId === msg.clientId || m.id === msg.id
+            ? { ...m, status: msg.status || "sent" }
+            : m
         )
       );
     };
 
     const handleStatusUpdate = ({ messageId, status }) => {
       setMessages((prev) =>
-        prev.map((m) => (m.id === messageId ? { ...m, status } : m))
+        prev.map((m) =>
+          m.id === messageId ? { ...m, status } : m
+        )
       );
     };
 
@@ -63,9 +89,10 @@ export default function ChatWindow({ chat, onBack, userId }) {
       socket.off("messageSent", handleMessageSent);
       socket.off("messageStatusUpdated", handleStatusUpdate);
     };
-  }, [userId, chat]);
+  }, [userId, chat?.id]);
 
-  const handleSend = () => {
+  // Send message
+  const handleSend = async () => {
     if (!newMessage.trim()) return;
 
     const now = new Date();
@@ -73,29 +100,50 @@ export default function ChatWindow({ chat, onBack, userId }) {
 
     const msgObj = {
       clientId,
-      text: newMessage.trim(),
       wa_id: userId,
       to: chat.id,
+      name: "You",
+      text: newMessage.trim(),
       time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       timestamp: now.getTime(),
       status: "pending",
-      name: "You",
+      sender: "business"
     };
 
-    socket.emit("sendMessage", msgObj);
+    // Optimistic UI update
+    setMessages((prev) => [...prev, msgObj]);
     setNewMessage("");
-  };
 
-  const handleNotWorkingAlert = () => {
-    alert("Not in working mode yet");
-  };
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wa_id: chat.id,
+          contactName: chat.otherUserName,
+          text: msgObj.text
+        })
+      });
 
-  const renderSeenStatus = (msg, index) => {
-    const isLastMessage =
-      index === messages.length - 1 && msg.wa_id === userId;
-    return isLastMessage ? (
-      <div className="text-xs text-blue-400 ml-2 justify-end">Seen</div>
-    ) : null;
+      if (!res.ok) throw new Error(`Failed to send: ${res.status}`);
+      const data = await res.json();
+      const msgId = data?.message?._id || clientId;
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.clientId === clientId ? { ...m, status: "sent", id: msgId } : m
+        )
+      );
+
+      socket.emit("sendMessage", { ...msgObj, id: msgId });
+    } catch (err) {
+      console.error("Send message error:", err);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.clientId === clientId ? { ...m, status: "failed" } : m
+        )
+      );
+    }
   };
 
   const getInitials = (name = "") =>
@@ -104,6 +152,25 @@ export default function ChatWindow({ chat, onBack, userId }) {
       .map((n) => n[0]?.toUpperCase())
       .join("")
       .slice(0, 2);
+
+  const handleNotWorkingAlert = () => alert("Not in working mode yet");
+
+  // Render WhatsApp style ticks
+  const renderTicks = (msg) => {
+    if (msg.sender !== "business") return null;
+
+    switch (msg.status) {
+      case "sent":
+        return <span className="text-gray-400 ml-1">✓</span>;
+      case "delivered":
+        return <span className="text-gray-400 ml-1">✓✓</span>;
+      case "read":
+        return <span className="text-blue-400 ml-1">✓✓</span>;
+      default:
+        return null;
+    }
+  };
+
 
   if (!chat) {
     return (
@@ -115,20 +182,14 @@ export default function ChatWindow({ chat, onBack, userId }) {
 
   return (
     <div className="flex flex-col h-screen max-h-full bg-[#111b21] text-[#e9edef] overflow-hidden">
-      {/* Header */}
+      {/* HEADER */}
       <div className="bg-[#202c33] p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="sm:hidden mr-2 font-bold">
-            ←
-          </button>
+          <button onClick={onBack} className="sm:hidden mr-2 font-bold">←</button>
           {chat.avatar ? (
-            <img
-              src="./abstract-profile.png"
-              alt={chat.otherUserName}
-              className="w-10 h-10 rounded-full"
-            />
+            <img src="./abstract-profile.png" alt={chat.otherUserName} className="w-10 h-10 rounded-full" />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-600 text-white flex items-center justify-center font-semibold select-none">
+            <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center font-semibold">
               {getInitials(chat.otherUserName)}
             </div>
           )}
@@ -137,70 +198,50 @@ export default function ChatWindow({ chat, onBack, userId }) {
             <p className="text-xs text-[#8696a0]">{chat.phone}</p>
           </div>
         </div>
-
-        {/* Call buttons */}
         <div className="flex items-center gap-3 text-[#8696a0]">
-          <button
-            className="p-2 rounded-full hover:bg-[#2a3942] transition-colors duration-200"
-            title="Voice Call"
-            aria-label="Voice Call"
-            onClick={handleNotWorkingAlert}
-          >
-            <FiPhone size={20} />
-          </button>
-          <button
-            className="p-2 rounded-full hover:bg-[#2a3942] transition-colors duration-200"
-            title="Video Call"
-            aria-label="Video Call"
-            onClick={handleNotWorkingAlert}
-          >
-            <FiVideo size={20} />
-          </button>
+          <button className="p-2 rounded-full hover:bg-[#2a3942]" onClick={handleNotWorkingAlert}><FiPhone size={20} /></button>
+          <button className="p-2 rounded-full hover:bg-[#2a3942]" onClick={handleNotWorkingAlert}><FiVideo size={20} /></button>
         </div>
       </div>
 
-      {/* Messages */}
+      {/* MESSAGES */}
       <div
         className="flex-1 overflow-y-auto p-4"
         style={{
           backgroundImage: 'url("/background.jpg")',
-          backgroundRepeat: "no-repeat",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          backgroundColor: "#e0e0e0", // fallback color, optional
         }}
       >
-        {messages.length === 0 ? (
-          <p className="text-center text-[#8696a0] mt-4">
-            No messages yet. Say hi!
-          </p>
+        {loading ? (
+          <p className="text-center text-[#8696a0] mt-4">Loading messages...</p>
+        ) : messages.length === 0 ? (
+          <p className="text-center text-[#8696a0] mt-4">No messages yet. Say hi!</p>
         ) : (
           messages.map((msg, index) => {
-            const isSentByUser = msg.wa_id === userId;
+            const isSentByUser = msg.sender === "business";
             return (
               <div
-                key={msg.clientId || msg.id}
-                className={`mb-2 flex ${
-                  isSentByUser ? "justify-end" : "justify-start"
-                }`}
+                key={msg.clientId || msg.id || `${index}-${msg.timestamp}`}
+                className={`mb-2 flex ${isSentByUser ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`p-2 rounded-lg max-w-xs break-words whitespace-pre-wrap ${
-                    isSentByUser
-                      ? "bg-[#005c4b] text-[#e9edef]"
-                      : "bg-[#202c33] text-[#e9edef]"
+                  className={`p-2 rounded-lg max-w-xs break-words ${
+                    isSentByUser ? "bg-[#005c4b]" : "bg-[#202c33]"
                   }`}
                 >
-                  <p>{msg.text}</p>
+                  <p>{msg.text || ""}</p>
                   <div className="flex items-center justify-end gap-1 mt-1 opacity-70 text-xs">
                     <span>
                       {msg.time ||
-                        new Date(msg.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        (msg.timestamp &&
+                          new Date(msg.timestamp).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }))}
                     </span>
-                    {isSentByUser && renderSeenStatus(msg, index)}
+                    {isSentByUser && renderTicks(msg)}
+
                   </div>
                 </div>
               </div>
@@ -210,8 +251,6 @@ export default function ChatWindow({ chat, onBack, userId }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Footer */}
-      {/* Input Footer */}
       <div className="p-3 bg-[#202c33] flex items-center gap-3 flex-shrink-0">
         {/* Emoji button */}
         <button
@@ -268,7 +307,6 @@ export default function ChatWindow({ chat, onBack, userId }) {
           Send
         </button>
       </div>
-
     </div>
   );
 }
