@@ -145,13 +145,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#1d1f1f] text-white">
-      {/* Header */}
-      <header className="p-3 bg-[#161717] text-white flex justify-between items-center flex-shrink-0 border-none">
-        <div className="flex items-center gap-2">
-          <img src="/whatsapp.png" alt="WhatsApp" className="w-6 h-6 object-contain" />
-          <h1 className="text-lg font-bold">WhatsApp</h1>
-        </div>
-      </header>
+      
 
       <div className="flex flex-grow overflow-hidden w-full min-h-0">
         {/* Sidebar (Desktop only) */}

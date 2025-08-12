@@ -56,10 +56,10 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
       
 
     <div
-      className="text-xl font-bold p-4 flex items-center justify-between gap-2"
+      className="mt-3 text-xl font-bold p-4 flex items-center justify-between gap-2"
     >
       <div className="flex items-center gap-2">
-        Chats{" "}
+        WhatsApp{" "}
         <span
           aria-hidden="true"
           className="bg-[#25D366] text-[#111b21] rounded-full px-2 py-0.5 text-xs font-semibold"
@@ -88,17 +88,16 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
 
 
       {/* Search Bar */}
-      <div className="p-2">
-        <input
-          type="search"
-          aria-label="Search or start new chat"
-          placeholder="Search or start new chat"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full p-2 rounded-md bg-[#2e2f2f] border-b hover:border-[#25D366] text-[#E9EDEF] placeholder-[#8696A0] focus:outline-none focus:ring-2 focus:ring-[#25D366]"
-          autoComplete="off"
-        />
-      </div>
+      <input
+        type="search"
+        aria-label="Search or start new chat"
+        placeholder="Search or start new chat"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="m-2 p-2 rounded-full bg-[#2e2f2f] border border-transparent hover:border-gray-700 text-[#E9EDEF] placeholder-[#8696A0] focus:outline-none focus:border-gray-700 focus:ring-2 focus:ring-[#25D366] transition-colors duration-200"
+        autoComplete="off"
+      />
+
 
       <div className="mt-3 mb-3 ">
         <button className="text-[#111B21] border border-[#222D32] rounded-full ml-3 p-2 bg-[#10362A] pl-4 pr-4 ">All</button>
