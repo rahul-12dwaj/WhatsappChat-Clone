@@ -32,10 +32,8 @@ const connectedUsers = new Map();
 
 // socket.io events
 io.on("connection", (socket) => {
-  console.log(`🔌 Client connected: ${socket.id}`);
 
   socket.on("register", (userId) => {
-    console.log(`📌 User registered: ${userId}`);
     connectedUsers.set(userId, socket.id);
     socket.join(userId); // join a private room for this user
   });
@@ -50,7 +48,6 @@ io.on("connection", (socket) => {
 
 
   socket.on("disconnect", () => {
-    console.log(`❌ Client disconnected: ${socket.id}`);
     for (let [userId, id] of connectedUsers.entries()) {
       if (id === socket.id) {
         connectedUsers.delete(userId);

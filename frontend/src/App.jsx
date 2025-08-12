@@ -63,7 +63,7 @@ function App() {
   // WebSocket
   useEffect(() => {
     const handleConnect = () => {
-      console.log("🔌 Socket connected:", socket.id);
+      console.log("🔌 Socket connected");
     };
 
     const normalizeId = (id) => String(id).replace(/^\+/, "").trim();
@@ -106,7 +106,6 @@ function App() {
 
     socket.on("connect", handleConnect);
     socket.on("newMessage", handleNewMessage);
-    socket.on("newMessage", (msg) => console.log("SOCKET EVENT:", msg));
 
     return () => {
       socket.off("connect", handleConnect);
