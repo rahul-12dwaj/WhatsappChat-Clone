@@ -99,12 +99,21 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
       />
 
 
-      <div className="mt-3 mb-3 ">
-        <button className="text-[#111B21] border border-[#222D32] rounded-full ml-3 p-2 bg-[#10362A] pl-4 pr-4 ">All</button>
-        <button className="border border-[#222D32] rounded-full ml-3 p-2 pl-4 pr-4">Unread</button>
-        <button className="border border-[#222D32] rounded-full ml-3 p-2 pl-4 pr-4">Favourites</button>
-        <button className="border border-[#222D32] rounded-full ml-3 p-2 pl-4 pr-4">Groups</button>
+      <div className="m-4 mt-3 mb-3  flex flex-wrap gap-2">
+        <button className="text-[#111B21] border border-[#222D32] rounded-full p-1 px-3 bg-[#10362A] text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4">
+          All
+        </button>
+        <button className="border border-[#222D32] rounded-full p-1 px-3 text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4">
+          Unread
+        </button>
+        <button className="border border-[#222D32] rounded-full p-1 px-3 text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4">
+          Favourites
+        </button>
+        <button className="border border-[#222D32] rounded-full p-1 px-3 text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4">
+          Groups
+        </button>
       </div>
+
 
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto no-scrollbar">
