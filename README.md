@@ -36,24 +36,6 @@ This project replicates the core user interface and messaging experience of What
 ---
 
 
-
-## Folder Structure
-```
-
-/my-backend
-  ├── payloads/
-  ├── server.js
-/frontend
-  ├── src/
-      ├── components/
-      ├── App.js
-      ├── index.js
-  ├── tailwind.config.js
-```
-
-
----
-
 ## Author
 
 Your Name - Rahul Bhardwaj(https://github.com/rahul.12dwaj)
