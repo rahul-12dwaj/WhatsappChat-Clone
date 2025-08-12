@@ -195,7 +195,7 @@ export default function ChatWindow({ chat, onBack, userId }) {
           )}
           <div>
             <h2 className="font-semibold">{chat.otherUserName}</h2>
-            <p className="text-xs text-[#8696a0]">{chat.phone}</p>
+            <p className="text-xs text-[#8696a0]">{chat.id}</p>
           </div>
         </div>
         <div className="flex items-center gap-3 text-[#8696a0]">
