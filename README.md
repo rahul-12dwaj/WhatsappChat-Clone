@@ -15,8 +15,7 @@ This project replicates the core user interface and messaging experience of What
 - **Frontend:** React, Tailwind CSS  
 - **Backend:** Node.js, Express.js  
 - **Database:** MongoDB (NoSQL)  
-- **Real-time communication:** (You can add if using Socket.IO or similar)  
-- **Icons:** Lucide-react (or any other icon library)  
+- **Real-time communication:** using Socket.IO   
 
 ---
 
@@ -36,72 +35,21 @@ This project replicates the core user interface and messaging experience of What
 
 ---
 
-## Installation and Setup
 
-### Backend
-
-1. Clone the repository  
-2. Navigate to the backend folder  
-3. Install dependencies:  
-   ```bash
-   npm install
-
-
-4. Setup your `.env` file with MongoDB connection string and other configs
-5. Start the server:
-
-   ```bash
-   npm start
-   ```
-
-### Frontend
-
-1. Navigate to the frontend folder
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-3. Start the React development server:
-
-   ```bash
-   npm start
-   ```
-
----
 
 ## Folder Structure
 ```
 
-/BWhatsappClone
+/my-backend
   ├── payloads/
   ├── server.js
-/whatsappClone
+/frontend
   ├── src/
       ├── components/
       ├── App.js
       ├── index.js
   ├── tailwind.config.js
 ```
-
-## Usage
-
-* Register or login (if implemented)
-* Select or create a chat
-* Send messages in real-time
-* View message status and timestamps
-* Enjoy the WhatsApp-like UI experience
-
----
-
-## Future Improvements
-
-* Add group chats and multi-user conversations
-* Implement real-time communication with Socket.IO or WebRTC
-* Add media (images, videos) and file sharing support
-* Push notifications
-* User profile customization
-* Deployment scripts and Docker support
 
 
 ---
