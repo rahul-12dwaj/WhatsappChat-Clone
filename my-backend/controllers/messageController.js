@@ -167,10 +167,6 @@ async function sendMessage(req, res) {
 
     const savedMessage = await Message.create(newMessage);
 
-    console.log(
-      `[MESSAGE SENT] Business (${businessNumber}) → ${contactName} (${wa_id}) | "${text}" @ ${new Date().toISOString()}`
-    );
-
     // Emit real-time event with customer ID as wa_id
     const io = req.app.get("io");
     if (io) {

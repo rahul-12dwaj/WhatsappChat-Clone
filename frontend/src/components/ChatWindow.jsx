@@ -181,9 +181,14 @@ export default function ChatWindow({ chat, onBack, userId }) {
   }
 
   return (
-    <div className="flex flex-col h-screen max-h-full bg-[#111b21] text-[#e9edef] overflow-hidden">
+    <div className="flex flex-col h-screen max-h-full bg-[#292a2a] text-[#e9edef] overflow-hidden"
+      style={{
+          backgroundImage: 'url("/background.png")',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}>
       {/* HEADER */}
-      <div className="bg-[#202c33] p-4 flex items-center justify-between flex-shrink-0">
+      <div className="bg-[#161717] p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="sm:hidden mr-2 font-bold">←</button>
           {chat.avatar ? (
@@ -207,11 +212,7 @@ export default function ChatWindow({ chat, onBack, userId }) {
       {/* MESSAGES */}
       <div
         className="flex-1 overflow-y-auto p-4"
-        style={{
-          backgroundImage: 'url("/background.jpg")',
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
+        
       >
         {loading ? (
           <p className="text-center text-[#8696a0] mt-4">Loading messages...</p>
@@ -227,7 +228,7 @@ export default function ChatWindow({ chat, onBack, userId }) {
               >
                 <div
                   className={`p-2 rounded-lg max-w-xs break-words ${
-                    isSentByUser ? "bg-[#005c4b]" : "bg-[#202c33]"
+                    isSentByUser ? "bg-[#005c4b]" : "bg-[#2e2f2f]"
                   }`}
                 >
                   <p>{msg.text || ""}</p>
@@ -251,7 +252,7 @@ export default function ChatWindow({ chat, onBack, userId }) {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-3 bg-[#202c33] flex items-center gap-3 flex-shrink-0">
+      <div className="pl-1 pr-1 p-1 m-4 rounded-full flex items-center gap-3 flex-shrink-0 bg-[#2e2f2f]">
         {/* Emoji button */}
         <button
           className="p-2 rounded-full hover:bg-[#2a3942] text-[#8696a0] transition-colors duration-200 flex-shrink-0"
@@ -284,7 +285,7 @@ export default function ChatWindow({ chat, onBack, userId }) {
               handleSend();
             }
           }}
-          className="flex-grow p-2 rounded-full outline-none bg-[#2a3942] text-[#e9edef] placeholder-[#8696a0]"
+          className="flex-grow p-2 outline-none text-[#e9edef] placeholder-[#8696a0]"
           style={{ minWidth: 0 }} // important to prevent overflow in flex containers
         />
 
@@ -298,14 +299,7 @@ export default function ChatWindow({ chat, onBack, userId }) {
           <FiMic size={22} />
         </button>
 
-        {/* Send button */}
-        <button
-          onClick={handleSend}
-          disabled={!newMessage.trim()}
-          className="bg-[#005c4b] disabled:bg-[#025144] text-white px-4 py-2 rounded-full transition-colors duration-200 flex-shrink-0"
-        >
-          Send
-        </button>
+        
       </div>
     </div>
   );

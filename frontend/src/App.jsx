@@ -144,9 +144,9 @@ function App() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#111b21] text-white">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#1d1f1f] text-white">
       {/* Header */}
-      <header className="p-3 bg-[#111b21] text-white flex justify-between items-center flex-shrink-0 border-none">
+      <header className="p-3 bg-[#161717] text-white flex justify-between items-center flex-shrink-0 border-none">
         <div className="flex items-center gap-2">
           <img src="/whatsapp.png" alt="WhatsApp" className="w-6 h-6 object-contain" />
           <h1 className="text-lg font-bold">WhatsApp</h1>
@@ -186,7 +186,7 @@ function App() {
           {/* Mobile - Chat List (No sidebar) */}
           {!selectedChatId && (
             <div className="w-full sm:hidden flex flex-col min-h-0">
-              <div className="flex-grow w-full overflow-y-auto bg-[#111b21] min-h-0">
+              <div className="flex-grow w-full overflow-y-auto bg-[#161717] min-h-0">
                 <ChatList
                   chats={sortedChats}
                   onSelectChat={setSelectedChatId}
