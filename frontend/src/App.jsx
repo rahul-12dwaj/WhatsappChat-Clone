@@ -157,7 +157,7 @@ function App() {
         return (
           <>
             {/* Chat List */}
-            <div className="hidden sm:flex w-1/3 border-r border-l border-gray-700 bg-gray-700 min-h-0 overflow-y-auto">
+            <div className="hidden sm:flex w-1/3 border-r border-l border-gray-700 bg-gray-700 min-h-0 overflow-hindden">
               <ChatList
                 chats={sortedChats}
                 onSelectChat={setSelectedChatId}
