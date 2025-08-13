@@ -71,7 +71,7 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
         <div className="flex items-center gap-3">
           <FiMessageSquare
             size={24}
-            className="cursor-pointer hover:text-[#25D366]"
+            className="cursor-pointer hover:text-[#25D366] mt-1"
             title="New Chat"
             onClick={() => alert("Add new chat clicked")}
           />
