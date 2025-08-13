@@ -48,7 +48,7 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
   );
 
   const buttonClasses =
-    "border border-[#222D32] rounded-full p-1 px-3 text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4 transition-colors duration-200 hover:bg-[#25D366] hover:text-[#111B21]";
+    "border border-[#222D32] rounded-full p-1 px-3 text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4 transition-colors duration-200 hover:bg-[#2e2f2f] hover:text-[#111B21]";
 
   return (
     <div
