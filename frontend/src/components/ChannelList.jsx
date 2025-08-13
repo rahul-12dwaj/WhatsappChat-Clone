@@ -18,7 +18,7 @@ function ChannelList() {
   ];
 
   return (
-    <div className="w-full border-r border-[#222D32] flex flex-col overflow-x-hidden min-w-0 bg-[#161717] text-[#E9EDEF]">
+    <div className="w-full border-r border-[#222D32] flex flex-col overflow-x-hidden overflow-y-hidden min-w-0 bg-[#161717] text-[#E9EDEF]">
       {/* Title */}
       <div className="mt-3 text-xl font-bold p-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">Channels</div>
