@@ -40,10 +40,10 @@ function Sidebar({ activeTab, setActiveTab, isHorizontal = false }) {
     <nav
       aria-label="Main navigation"
       className="flex flex-col justify-between items-center bg-[#1d1f1f] text-gray-400"
-      style={{ width: "72px", borderRight: "1px solid #2a3942" }}
+      style={{ width: "62px", borderRight: "1px solid #2a3942" }}
     >
       {/* Top icons */}
-      <div className="flex flex-col items-center py-3 space-y-3 mt-3">
+      <div className="flex flex-col items-center py-3 space-y-1 mt-2">
         {buttons.slice(0, 4).map(({ id, iconSrc, label }) => (
           <button
             key={id}
