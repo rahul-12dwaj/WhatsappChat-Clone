@@ -1,33 +1,27 @@
-function EmptyState() {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-[#161717] text-[#8696a0] select-none px-6 py-8 w-full">
-      {/* Logo */}
-      <img
-        src="/whatsapp.png"
-        alt="WhatsApp Logo"
-        className="w-20 h-20 mb-6"
-      />
+import { IoLockClosedOutline } from "react-icons/io5";
 
-      {/* Main Text */}
-      <div className="text-center max-w-md w-full">
-        <h1 className="text-3xl font-semibold mb-2">
-          WhatsApp for Windows
-        </h1>
-        <p className="text-sm leading-relaxed mb-2">
-          Send and receive messages without keeping your phone online.
-        </p>
-        <p className="text-sm leading-relaxed">
-          Use WhatsApp on up to 4 linked devices and your phone at the
-          same time.
-        </p>
+export default function StatusListEmptyState() {
+  return (
+    <div className="bg-[#161717] flex flex-col items-center justify-center w-full h-full bg-[#111b21] text-[#E9EDEF]">
+      {/* Center Icon */}
+      <div className="mb-6">
+        <img
+        src="/whatsapp.png"
+        className="w-20 h-20 opacity-50"
+      />
       </div>
 
-      {/* Footer Text */}
-      <p className="text-2xl text-[#4a8c37] mt-8 w-full text-center font-semibold select-text">
-        End-to-end encrypted
+      {/* Main text */}
+      <h3 className="text-2xl mb-2 opacity-50">Download Whatsapp for Windows</h3>
+      <p className="text-[#8696A0] text-s text-center max-w-lg">
+        Make calls, share your screen and get a faster experience when you download the windows app.
       </p>
+
+      {/* Footer */}
+      <div className="absolute bottom-6 flex items-center gap-2 text-[#8696A0] text-xs">
+        <IoLockClosedOutline size={14} />
+        <span className="text-lg">Your status updates are end-to-end encrypted</span>
+      </div>
     </div>
   );
 }
-
-export default EmptyState

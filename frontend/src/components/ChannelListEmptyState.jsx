@@ -1,24 +1,28 @@
-function ChannelListEmptyState() {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-[#161717] text-[#8696a0] select-none px-6 py-8 w-full">
-      {/* Logo */}
-      <img
-        src="/whatsapp.png"
-        alt="WhatsApp Logo"
-        className="w-20 h-20 mb-6"
-      />
+import { IoLockClosedOutline } from "react-icons/io5";
 
-      {/* Main Text */}
-      <div className="text-center max-w-md w-full">
-        <h1 className="text-3xl font-semibold mb-2">
-          No Channels Available
-        </h1>
-        <p className="text-sm leading-relaxed mb-2">
-          Subscribe to channels to receive updates and content from your favorite creators.
-        </p>
+export default function StatusListEmptyState() {
+  return (
+    <div className="bg-[#161717] flex flex-col items-center justify-center w-full h-full bg-[#111b21] text-[#E9EDEF]">
+      {/* Center Icon */}
+      <div className="mb-6">
+        <img
+        src="/signal.png"
+        alt="Channel"
+        className="w-20 h-20 opacity-50"
+      />
+      </div>
+
+      {/* Main text */}
+      <h3 className="text-2xl mb-2 opacity-50">Discover Channels</h3>
+      <p className="text-[#8696A0] text-s text-center max-w-lg">
+        Entertainmet, sports, news, lifestyle, people and more. Follow the channel that interests you.
+      </p>
+
+      {/* Footer */}
+      <div className="absolute bottom-6 flex items-center gap-2 text-[#8696A0] text-xs">
+        <IoLockClosedOutline size={14} />
+        <span className="text-lg">Your status updates are end-to-end encrypted</span>
       </div>
     </div>
   );
 }
-
-export default ChannelListEmptyState;

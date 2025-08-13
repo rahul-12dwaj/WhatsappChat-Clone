@@ -1,4 +1,5 @@
 import React from "react";
+import { IoAdd } from "react-icons/io5";
 
 function CommunityTab() {
   const communities = [
@@ -29,7 +30,7 @@ function CommunityTab() {
       <div className="mt-3 text-xl font-bold p-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">Communities</div>
         <div className="flex items-center gap-3">
-          <img src="/menu.png" alt="Menu" className="w-6 h-6 cursor-pointer" draggable={false} />
+          <IoAdd size={24} className="cursor-pointer" />
         </div>
       </div>
 

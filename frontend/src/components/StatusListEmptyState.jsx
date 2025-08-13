@@ -1,17 +1,20 @@
 import { IoLockClosedOutline } from "react-icons/io5";
-import { PiCircleDashedThin } from "react-icons/pi"; // placeholder icon
 
 export default function StatusListEmptyState() {
   return (
     <div className="bg-[#161717] flex flex-col items-center justify-center w-full h-full bg-[#111b21] text-[#E9EDEF]">
       {/* Center Icon */}
       <div className="mb-6">
-        <PiCircleDashedThin size={60} className="text-[#8696A0]" />
+        <img
+        src="/status.png"
+        alt="Status"
+        className="w-20 h-20 opacity-50"
+      />
       </div>
 
       {/* Main text */}
-      <h3 className="text-2xl font-semibold mb-2">Share status updates</h3>
-      <p className="text-[#8696A0] text-s text-center max-w-xs">
+      <h3 className="text-2xl mb-2 opacity-50">Share status updates</h3>
+      <p className="text-[#8696A0] text-s text-center max-w-lg">
         Share photos, videos and text that disappear after 24 hours.
       </p>
 
