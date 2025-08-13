@@ -15,7 +15,7 @@ export default function StatusList() {
       </div>
 
       {/* My Status */}
-      <div className="px-4 flex items-center gap-3 cursor-pointer hover:bg-[#202c33] py-2">
+      <div className="px-4 flex items-center gap-3 cursor-pointer hover:bg-[#292a2a] py-2">
         <div className="relative">
           <img
             src={defaultImg}

@@ -50,7 +50,7 @@ function CommunityTab() {
         {communities.map((community) => (
           <div
             key={community.id}
-            className="flex items-center gap-3 p-3 min-w-0 select-none cursor-default"
+            className="flex items-center gap-3 p-3 min-w-0 select-none cursor-default cursor-pointer hover:bg-[#292a2a]"
           >
             {community.avatar ? (
               <img

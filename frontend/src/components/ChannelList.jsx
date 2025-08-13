@@ -12,7 +12,7 @@ function ChannelList() {
     {
       id: "3",
       name: "Jokes",
-      description: "Sharing memes and jokes",
+      description: "Sharing memes and jokes.",
       avatar: null,
     },
   ];
@@ -39,11 +39,11 @@ function ChannelList() {
       />
 
       {/* Channel List */}
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto no-scrollbar ">
         {channels.map((channel) => (
           <div
             key={channel.id}
-            className="flex items-center gap-3 p-3 min-w-0 select-none cursor-default"
+            className="flex items-center gap-3 p-3 min-w-0 select-none cursor-default cursor-pointer hover:bg-[#292a2a]"
           >
             {channel.avatar ? (
               <img
