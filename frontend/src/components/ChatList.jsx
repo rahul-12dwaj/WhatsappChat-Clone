@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { FiMessageSquare, FiMenu } from "react-icons/fi"; // Using react-icons
 
 function getInitials(name = "") {
   return name
@@ -46,46 +47,42 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
     [onSelectChat]
   );
 
+  const buttonClasses =
+    "border border-[#222D32] rounded-full p-1 px-3 text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4 transition-colors duration-200 hover:bg-[#25D366] hover:text-[#111B21]";
+
   return (
     <div
-      className="w-full border-r border-[#222D32] flex flex-col overflow-x-hidden min-w-0 bg-[#161717] text-[#E9EDEF]"
+      className="h-screen w-full border-r border-[#222D32] flex flex-col overflow-x-hidden min-w-0 bg-[#161717] text-[#E9EDEF]"
       role="list"
       aria-label="Chat list"
     >
       {/* Title */}
-      
-
-    <div
-      className="mt-3 text-xl font-bold p-4 flex items-center justify-between gap-2"
-    >
-      <div className="flex items-center gap-2">
-        WhatsApp{" "}
-        <span
-          aria-hidden="true"
-          className="bg-[#25D366] text-[#111b21] rounded-full px-2 py-0.5 text-xs font-semibold"
-          title={`${chats.length} chats`}
-        >
-          {chats.length}
-        </span>
+      <div className="mt-3 text-xl font-bold p-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          WhatsApp{" "}
+          <span
+            aria-hidden="true"
+            className="bg-[#25D366] text-[#111b21] rounded-full px-2 py-0.5 text-xs font-semibold"
+            title={`${chats.length} chats`}
+          >
+            {chats.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <FiMessageSquare
+            size={24}
+            className="cursor-pointer hover:text-[#25D366]"
+            title="New Chat"
+            onClick={() => alert("Add new chat clicked")}
+          />
+          <FiMenu
+            size={24}
+            className="cursor-pointer hover:text-[#25D366]"
+            title="Menu"
+            onClick={() => alert("Menu clicked")}
+          />
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <img
-          src="/new-message.png"
-          alt="Add Chat"
-          className="w-6 h-6 cursor-pointer mr-2"
-          onClick={() => alert("Add new chat clicked")}
-          draggable={false}
-        />
-        <img
-          src="/menu.png"
-          alt="Menu"
-          className="w-6 h-6 cursor-pointer"
-          onClick={() => alert("Menu clicked")}
-          draggable={false}
-        />
-      </div>
-    </div>
-
 
       {/* Search Bar */}
       <input
@@ -98,22 +95,13 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
         autoComplete="off"
       />
 
-
-      <div className="m-4 mt-3 mb-3  flex flex-wrap gap-2">
-        <button className="text-[#111B21] border border-[#222D32] rounded-full p-1 px-3 bg-[#10362A] text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4">
-          All
-        </button>
-        <button className="border border-[#222D32] rounded-full p-1 px-3 text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4">
-          Unread
-        </button>
-        <button className="border border-[#222D32] rounded-full p-1 px-3 text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4">
-          Favourites
-        </button>
-        <button className="border border-[#222D32] rounded-full p-1 px-3 text-sm sm:text-base sm:p-2 sm:pl-4 sm:pr-4">
-          Groups
-        </button>
+      {/* Filter Buttons */}
+      <div className="m-4 mt-3 mb-3 flex flex-wrap gap-2">
+        <button className={`${buttonClasses} bg-[#10362A] text-[#111B21]`}>All</button>
+        <button className={buttonClasses}>Unread</button>
+        <button className={buttonClasses}>Favourites</button>
+        <button className={buttonClasses}>Groups</button>
       </div>
-
 
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto no-scrollbar">
@@ -161,10 +149,7 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
                       {formattedTime}
                     </span>
                   </div>
-                  <p
-                    className="text-sm truncate text-[#8696A0]"
-                    title={lastMessage}
-                  >
+                  <p className="text-sm truncate text-[#8696A0]" title={lastMessage}>
                     {lastMessage}
                   </p>
                 </div>
@@ -172,11 +157,7 @@ export default function ChatList({ chats = [], onSelectChat, selectedChatId }) {
             );
           })
         ) : (
-          <div
-            className="text-center text-[#8696A0] mt-4 text-sm"
-            role="alert"
-            aria-live="polite"
-          >
+          <div className="text-center text-[#8696A0] mt-4 text-sm" role="alert" aria-live="polite">
             No chats found
           </div>
         )}
